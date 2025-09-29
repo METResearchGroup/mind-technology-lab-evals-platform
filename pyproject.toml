@@ -1,0 +1,7 @@
+[project]
+name = "mind-technology-lab-evals-platform"
+version = "0.1.0"
+description = "Evals platform for the Mind Technology Lab."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
