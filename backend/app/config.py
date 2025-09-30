@@ -21,10 +21,16 @@ class Settings(BaseSettings):
 
     # API Configuration
     api_v1_prefix: str = Field(default="/api", alias="API_V1_PREFIX")
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000"],
+    cors_origins: str = Field(
+        default="http://localhost:3000",
         alias="CORS_ORIGINS",
+        description="Comma-separated list of allowed CORS origins",
     )
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Get CORS origins as a list."""
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
     # Rate Limiting Configuration
     rate_limit_per_minute: int = 60
