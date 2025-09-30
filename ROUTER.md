@@ -10,6 +10,7 @@
 
 ### **Essential Documentation**
 - [`README.md`](README.md) - Project overview and quick start
+- [`AI_AGENT_INSTRUCTIONS.md`](AI_AGENT_INSTRUCTIONS.md) - Guidelines for AI agents working on this repo
 - [`SETUP.md`](SETUP.md) - Complete setup and installation guide
 - [`BACKLOG.md`](BACKLOG.md) - Technical debt and future improvements
 

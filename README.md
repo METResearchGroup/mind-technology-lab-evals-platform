@@ -5,6 +5,7 @@ A Python-based evaluation platform for the Mind and Technology Lab, built with m
 ## 📚 **Navigation**
 
 - 🗺️ **[ROUTER.md](ROUTER.md)** - Complete repository navigation guide and file index
+- 🤖 **[AI_AGENT_INSTRUCTIONS.md](AI_AGENT_INSTRUCTIONS.md)** - Guidelines for AI agents working on this repo
 - 🚀 **[SETUP.md](SETUP.md)** - Detailed installation and configuration instructions
 - 📋 **[BACKLOG.md](BACKLOG.md)** - Technical debt and future improvements
 
