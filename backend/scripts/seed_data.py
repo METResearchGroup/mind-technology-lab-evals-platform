@@ -1,4 +1,9 @@
-"""Seed script to populate database with dummy data for testing."""
+"""Seed script to populate database with dummy data for testing.
+
+NOTE: All data in this script is SYNTHETIC/MOCK data for development and testing.
+Production evaluations should use real data collected from actual research use cases.
+All tasks are tagged with 'mock' and 'synthetic' to clearly identify them.
+"""
 
 import json
 import sys
@@ -21,8 +26,8 @@ DUMMY_TASKS = [
         "expected_output": "4",
         "task_type": "classification",
         "evaluation_method": "code",
-        "tags": json.dumps(["math", "basic", "arithmetic"]),
-        "project": "math-evals",
+        "tags": json.dumps(["mock", "synthetic", "math", "basic", "arithmetic"]),
+        "project": "dev-testing",
     },
     {
         "task_version": "v1.0",
@@ -32,8 +37,8 @@ DUMMY_TASKS = [
         "expected_output": "Paris",
         "task_type": "classification",
         "evaluation_method": "code",
-        "tags": json.dumps(["geography", "factual", "easy"]),
-        "project": "knowledge-evals",
+        "tags": json.dumps(["mock", "synthetic", "geography", "factual", "easy"]),
+        "project": "dev-testing",
     },
     {
         "task_version": "v1.0",
@@ -44,8 +49,8 @@ DUMMY_TASKS = [
         "task_type": "generation",
         "evaluation_method": "llm_judge",
         "rubric": "Response should explain: 1) for loop iterates 0-9, 2) print outputs each number, 3) each number on new line",
-        "tags": json.dumps(["code", "python", "explanation"]),
-        "project": "code-evals",
+        "tags": json.dumps(["mock", "synthetic", "code", "python", "explanation"]),
+        "project": "dev-testing",
     },
     {
         "task_version": "v1.0",
@@ -55,8 +60,8 @@ DUMMY_TASKS = [
         "expected_output": "negative",
         "task_type": "classification",
         "evaluation_method": "code",
-        "tags": json.dumps(["sentiment", "nlp", "classification"]),
-        "project": "nlp-evals",
+        "tags": json.dumps(["mock", "synthetic", "sentiment", "nlp", "classification"]),
+        "project": "dev-testing",
     },
     {
         "task_version": "v1.0",
@@ -66,8 +71,8 @@ DUMMY_TASKS = [
         "expected_output": '{"name": "John", "age": 30, "city": "NYC"}',
         "task_type": "classification",
         "evaluation_method": "code",
-        "tags": json.dumps(["format", "json", "structured"]),
-        "project": "format-evals",
+        "tags": json.dumps(["mock", "synthetic", "format", "json", "structured"]),
+        "project": "dev-testing",
     },
     {
         "task_version": "v1.0",
@@ -78,8 +83,8 @@ DUMMY_TASKS = [
         "task_type": "generation",
         "evaluation_method": "llm_judge",
         "rubric": "Check: 1) 5-7-5 syllable structure, 2) related to coding, 3) poetic quality",
-        "tags": json.dumps(["creative", "poetry", "generation"]),
-        "project": "creative-evals",
+        "tags": json.dumps(["mock", "synthetic", "creative", "poetry", "generation"]),
+        "project": "dev-testing",
     },
     {
         "task_version": "v1.0",
@@ -89,8 +94,8 @@ DUMMY_TASKS = [
         "expected_output": "refuse",
         "task_type": "classification",
         "evaluation_method": "code",
-        "tags": json.dumps(["safety", "refusal", "medical"]),
-        "project": "safety-evals",
+        "tags": json.dumps(["mock", "synthetic", "safety", "refusal", "medical"]),
+        "project": "dev-testing",
     },
     {
         "task_version": "v1.0",
@@ -100,8 +105,8 @@ DUMMY_TASKS = [
         "expected_output": "4:45pm",
         "task_type": "classification",
         "evaluation_method": "hybrid",
-        "tags": json.dumps(["reasoning", "math", "word-problem"]),
-        "project": "reasoning-evals",
+        "tags": json.dumps(["mock", "synthetic", "reasoning", "math", "word-problem"]),
+        "project": "dev-testing",
     },
 ]
 
