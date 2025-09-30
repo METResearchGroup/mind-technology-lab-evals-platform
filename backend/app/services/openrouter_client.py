@@ -32,6 +32,11 @@ class APIError(OpenRouterError):
 class OpenRouterClient:
     """Client for interacting with OpenRouter API."""
 
+    # Class-level circuit breaker state (shared across all instances)
+    _consecutive_failures = 0
+    _circuit_breaker_threshold = 5
+    _last_failure_time: float | None = None
+
     def __init__(self, api_key: str | None = None) -> None:
         """Initialize OpenRouter client.
 
@@ -41,8 +46,6 @@ class OpenRouterClient:
         self.api_key = api_key or settings.openrouter_api_key
         self.base_url = settings.openrouter_base_url
         self.max_retries = 5
-        self.circuit_breaker_threshold = 5
-        self.consecutive_failures = 0
 
     def generate(
         self,
@@ -65,8 +68,21 @@ class OpenRouterClient:
             APIError: If API request fails
             OpenRouterError: For other errors
         """
-        if self.consecutive_failures >= self.circuit_breaker_threshold:
-            raise OpenRouterError("Circuit breaker open: too many consecutive failures")
+        # Check circuit breaker (shared across all instances)
+        if OpenRouterClient._consecutive_failures >= OpenRouterClient._circuit_breaker_threshold:
+            # Auto-reset after 60 seconds
+            if (
+                OpenRouterClient._last_failure_time
+                and time.time() - OpenRouterClient._last_failure_time > 60
+            ):
+                logger.info("Circuit breaker auto-reset after 60 seconds")
+                OpenRouterClient._consecutive_failures = 0
+                OpenRouterClient._last_failure_time = None
+            else:
+                raise OpenRouterError(
+                    f"Circuit breaker open: {OpenRouterClient._consecutive_failures} "
+                    f"consecutive failures (resets after 60s)"
+                )
 
         config = config or {}
 
@@ -82,7 +98,8 @@ class OpenRouterClient:
         for attempt in range(self.max_retries):
             try:
                 response = self._call_api(payload)
-                self.consecutive_failures = 0  # Reset on success
+                OpenRouterClient._consecutive_failures = 0  # Reset on success
+                OpenRouterClient._last_failure_time = None
                 return response
             except RateLimitError:
                 if attempt < self.max_retries - 1:
@@ -92,10 +109,12 @@ class OpenRouterClient:
                     )
                     time.sleep(wait_time)
                 else:
-                    self.consecutive_failures += 1
+                    OpenRouterClient._consecutive_failures += 1
+                    OpenRouterClient._last_failure_time = time.time()
                     raise
             except Exception as e:
-                self.consecutive_failures += 1
+                OpenRouterClient._consecutive_failures += 1
+                OpenRouterClient._last_failure_time = time.time()
                 logger.error(f"OpenRouter API error: {e}")
                 raise APIError(f"Failed to generate text: {e}") from e
 
@@ -140,8 +159,10 @@ class OpenRouterClient:
                 prompt_tokens = usage.get("prompt_tokens", 0)
                 completion_tokens = usage.get("completion_tokens", 0)
 
-                # Cost calculation (placeholder - actual rates vary by model)
-                # This is a rough estimate; real implementation should use model-specific pricing
+                # Cost calculation (PLACEHOLDER - actual rates vary by model)
+                # TODO: Implement model-specific pricing from OpenRouter API
+                # Current rates are rough estimates and NOT accurate for budget tracking
+                # Real pricing: GPT-4 (~$0.03/1k prompt), GPT-3.5 (~$0.002/1k prompt)
                 cost_usd = prompt_tokens * 0.00001 + completion_tokens * 0.00003
 
                 logger.info(

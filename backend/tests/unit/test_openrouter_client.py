@@ -27,7 +27,9 @@ def test_openrouter_client_initialization() -> None:
     assert client.api_key is not None
     assert client.base_url == expected_result["base_url"]
     assert client.max_retries == expected_result["max_retries"]
-    assert client.circuit_breaker_threshold == expected_result["circuit_breaker_threshold"]
+    assert (
+        OpenRouterClient._circuit_breaker_threshold == expected_result["circuit_breaker_threshold"]
+    )
 
 
 @patch("app.services.openrouter_client.httpx.Client")
@@ -182,6 +184,10 @@ def test_generate_api_error(mock_client_class: MagicMock) -> None:
 @patch("app.services.openrouter_client.httpx.Client")
 def test_circuit_breaker(mock_client_class: MagicMock) -> None:
     """Test circuit breaker opens after consecutive failures."""
+    # Reset circuit breaker state before test
+    OpenRouterClient._consecutive_failures = 0
+    OpenRouterClient._last_failure_time = None
+
     mock_response = MagicMock()
     mock_response.status_code = 500
     mock_response.text = "Error"
@@ -211,3 +217,7 @@ def test_circuit_breaker(mock_client_class: MagicMock) -> None:
     # Circuit breaker should now be open
     with pytest.raises(OpenRouterError, match="Circuit breaker open"):
         client.generate(prompt="Test", model="gpt-4")
+
+    # Cleanup: reset circuit breaker state after test
+    OpenRouterClient._consecutive_failures = 0
+    OpenRouterClient._last_failure_time = None
