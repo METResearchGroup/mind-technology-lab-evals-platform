@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Edit, Trash2, Play } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Play, Eye } from 'lucide-react';
 import { EvalTask } from '@/types';
 import { useTasks } from '@/hooks/useTasks';
+import { TaskDetailModal } from '@/components/ui/TaskDetailModal';
 
 interface ViewTasksTabProps {
   onAddTask?: () => void;
@@ -29,6 +30,7 @@ export function ViewTasksTab({
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
+  const [selectedTask, setSelectedTask] = useState<EvalTask | null>(null);
 
   // Filter tasks based on search and filters
   const filteredTasks = tasks.filter(task => {
@@ -235,31 +237,42 @@ export function ViewTasksTab({
                     <TableCell>
                       {new Date(task.created_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onRunTask?.(task.id)}
-                        >
-                          <Play className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onEditTask?.(task.id)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onDeleteTask?.(task.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedTask(task)}
+                              title="View Details"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onRunTask?.(task.id)}
+                              title="Run Evaluation"
+                            >
+                              <Play className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onEditTask?.(task.id)}
+                              title="Edit Task"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onDeleteTask?.(task.id)}
+                              title="Delete Task"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -307,6 +320,13 @@ export function ViewTasksTab({
           </CardContent>
         </Card>
       </div>
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        open={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+      />
     </div>
   );
 }
