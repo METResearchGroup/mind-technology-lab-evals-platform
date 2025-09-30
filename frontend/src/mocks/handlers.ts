@@ -18,7 +18,7 @@ const mockTasks = [
     expected_output: '4',
     ground_truth: '4',
     task_type: 'classification',
-    evaluation_method: 'code',
+    evaluation_method: 'exact_match',
     rubric: null,
     tags: ['math', 'test'],
     project: 'Test Project',

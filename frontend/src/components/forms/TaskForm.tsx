@@ -20,7 +20,7 @@ const taskFormSchema = z.object({
   expected_output: z.string().optional(),
   ground_truth: z.string().optional(),
   task_type: z.enum(['classification', 'generation']),
-  evaluation_method: z.enum(['code', 'llm_judge', 'hybrid']),
+  evaluation_method: z.enum(['exact_match', 'contains', 'json_exact', 'levenshtein', 'llm_factuality', 'llm_judge', 'hybrid']),
   rubric: z.string().optional(),
   tags: z.array(z.string()),
   project: z.string().optional(),
@@ -48,7 +48,7 @@ export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormPro
       expected_output: initialData?.expected_output || '',
       ground_truth: initialData?.ground_truth || '',
       task_type: initialData?.task_type || 'classification',
-      evaluation_method: initialData?.evaluation_method || 'code',
+      evaluation_method: initialData?.evaluation_method || 'exact_match',
       rubric: initialData?.rubric || '',
       tags: initialData?.tags || [],
       project: initialData?.project || '',
@@ -137,14 +137,18 @@ export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormPro
                 <Label htmlFor="evaluation_method">Evaluation Method *</Label>
                 <Select
                   value={evaluationMethod}
-                  onValueChange={(value) => setValue('evaluation_method', value as 'code' | 'llm_judge' | 'hybrid')}
+                  onValueChange={(value) => setValue('evaluation_method', value as typeof evaluationMethod)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select evaluation method" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="code">Code-based</SelectItem>
-                    <SelectItem value="llm_judge">LLM-as-Judge</SelectItem>
+                    <SelectItem value="exact_match">Exact Match</SelectItem>
+                    <SelectItem value="contains">Contains</SelectItem>
+                    <SelectItem value="json_exact">JSON Exact</SelectItem>
+                    <SelectItem value="levenshtein">Levenshtein (Fuzzy)</SelectItem>
+                    <SelectItem value="llm_factuality">LLM Factuality Judge</SelectItem>
+                    <SelectItem value="llm_judge">LLM Judge</SelectItem>
                     <SelectItem value="hybrid">Hybrid</SelectItem>
                   </SelectContent>
                 </Select>

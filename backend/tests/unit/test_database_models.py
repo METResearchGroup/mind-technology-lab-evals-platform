@@ -80,7 +80,7 @@ def test_create_eval_result(test_db: Session) -> None:
         name="Test Task",
         input="test",
         task_type="classification",
-        evaluation_method="code",
+        evaluation_method="exact_match",
     )
     test_db.add(task)
 

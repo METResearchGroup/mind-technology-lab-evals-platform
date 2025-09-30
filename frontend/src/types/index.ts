@@ -9,7 +9,7 @@ export interface EvalTask {
   expected_output?: string;
   ground_truth?: string;
   task_type: 'classification' | 'generation';
-  evaluation_method: 'code' | 'llm_judge' | 'hybrid';
+  evaluation_method: 'exact_match' | 'contains' | 'json_exact' | 'levenshtein' | 'llm_factuality' | 'llm_judge' | 'hybrid';
   rubric?: string;
   tags: string[];  // JSON array, not comma-separated
   project?: string;
@@ -64,7 +64,7 @@ export interface TaskFormData {
   expected_output?: string;
   ground_truth?: string;
   task_type: 'classification' | 'generation';
-  evaluation_method: 'code' | 'llm_judge' | 'hybrid';
+  evaluation_method: 'exact_match' | 'contains' | 'json_exact' | 'levenshtein' | 'llm_factuality' | 'llm_judge' | 'hybrid';
   rubric?: string;
   tags: string[];
   project?: string;
@@ -96,7 +96,7 @@ export interface DashboardMetrics {
 }
 
 // Error categories from expert rubric
-export type ErrorCategory = 
+export type ErrorCategory =
   | 'hallucination'
   | 'format_violation'
   | 'refusal_failure'

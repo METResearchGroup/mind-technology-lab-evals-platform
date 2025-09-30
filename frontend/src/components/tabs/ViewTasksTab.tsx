@@ -11,6 +11,7 @@ import { Search, Plus, Edit, Trash2, Play, Eye } from 'lucide-react';
 import { EvalTask } from '@/types';
 import { useTasks } from '@/hooks/useTasks';
 import { TaskDetailModal } from '@/components/ui/TaskDetailModal';
+import { MethodBadgeWithTooltip } from '@/components/ui/MethodBadgeWithTooltip';
 
 interface ViewTasksTabProps {
   onAddTask?: () => void;
@@ -60,17 +61,7 @@ export function ViewTasksTab({
   };
 
   const getMethodBadge = (method: string) => {
-    const colors = {
-      code: 'text-eval-info',
-      llm_judge: 'text-eval-warning',
-      hybrid: 'text-eval-success',
-    };
-
-    return (
-      <Badge variant="outline" className={`text-xs ${colors[method as keyof typeof colors]}`}>
-        {method}
-      </Badge>
-    );
+    return <MethodBadgeWithTooltip method={method} className="text-xs" />;
   };
 
   if (loading) {
