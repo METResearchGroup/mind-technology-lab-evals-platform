@@ -1,57 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CheckCircle, XCircle, TrendingUp, TrendingDown, Download } from 'lucide-react';
-import { EvalTask, Model, EvalResult, DashboardMetrics } from '@/types';
-import { loadTasks, loadModels, loadResults, loadDashboardMetrics } from '@/lib/data';
+import { useTasks } from '@/hooks/useTasks';
+import { useModels } from '@/hooks/useModels';
+import { useResults, useDashboardStats } from '@/hooks/useResults';
 
 interface ReviewPerformanceTabProps {
   onExportResults?: () => void;
 }
 
 export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabProps) {
-  const [tasks, setTasks] = useState<EvalTask[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
-  const [results, setResults] = useState<EvalResult[]>([]);
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const { data: tasks = [] } = useTasks();
+  const { data: models = [] } = useModels();
+  const { data: results = [] } = useResults();
+  const { data: dashboardStats } = useDashboardStats();
   const [timeFilter, setTimeFilter] = useState<string>('7d');
   const [projectFilter, setProjectFilter] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [tasksData, modelsData, resultsData, metricsData] = await Promise.all([
-          loadTasks(),
-          loadModels(),
-          loadResults(),
-          loadDashboardMetrics(),
-        ]);
-        setTasks(tasksData);
-        setModels(modelsData);
-        setResults(resultsData);
-        setMetrics(metricsData);
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
 
   // Filter results based on time and project
   const filteredResults = results.filter(result => {
     const task = tasks.find(t => t.id === result.task_id);
     const resultDate = new Date(result.evaluated_at);
     const now = new Date();
-    
+
     let timeMatch = true;
     if (timeFilter === '1d') {
       timeMatch = resultDate >= new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -60,9 +37,9 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
     } else if (timeFilter === '30d') {
       timeMatch = resultDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
-    
+
     const projectMatch = projectFilter === 'all' || task?.project === projectFilter;
-    
+
     return timeMatch && projectMatch;
   });
 
@@ -73,11 +50,11 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
 
   const getModelPerformance = () => {
     const modelStats: Record<number, {name: string, total: number, passed: number, avgScore: number, avgLatency: number, totalCost: number}> = {};
-    
+
     filteredResults.forEach(result => {
       const model = models.find(m => m.id === result.model_id);
       if (!model) return;
-      
+
       if (!modelStats[result.model_id]) {
         modelStats[result.model_id] = {
           name: model.model_name,
@@ -88,20 +65,20 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
           totalCost: 0,
         };
       }
-      
+
       modelStats[result.model_id].total++;
       if (result.passed) modelStats[result.model_id].passed++;
       modelStats[result.model_id].avgScore += result.score || 0;
       modelStats[result.model_id].avgLatency += result.latency_ms;
       modelStats[result.model_id].totalCost += result.cost_usd;
     });
-    
+
     // Calculate averages
     Object.values(modelStats).forEach(stat => {
       stat.avgScore = stat.total > 0 ? stat.avgScore / stat.total : 0;
       stat.avgLatency = stat.total > 0 ? stat.avgLatency / stat.total : 0;
     });
-    
+
     return Object.entries(modelStats).map(([id, stats]) => ({
       id: parseInt(id),
       ...stats,
@@ -110,11 +87,11 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
 
   const getTaskPerformance = () => {
     const taskStats: Record<number, {name: string, total: number, passed: number, avgScore: number}> = {};
-    
+
     filteredResults.forEach(result => {
       const task = tasks.find(t => t.id === result.task_id);
       if (!task) return;
-      
+
       if (!taskStats[result.task_id]) {
         taskStats[result.task_id] = {
           name: task.name,
@@ -123,17 +100,17 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
           avgScore: 0,
         };
       }
-      
+
       taskStats[result.task_id].total++;
       if (result.passed) taskStats[result.task_id].passed++;
       taskStats[result.task_id].avgScore += result.score || 0;
     });
-    
+
     // Calculate averages
     Object.values(taskStats).forEach(stat => {
       stat.avgScore = stat.total > 0 ? stat.avgScore / stat.total : 0;
     });
-    
+
     return Object.entries(taskStats).map(([id, stats]) => ({
       id: parseInt(id),
       ...stats,
@@ -142,36 +119,25 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
 
   const getErrorAnalysis = () => {
     const errorCounts: Record<string, number> = {};
-    
+
     filteredResults.forEach(result => {
       if (result.error_category) {
         errorCounts[result.error_category] = (errorCounts[result.error_category] || 0) + 1;
       }
     });
-    
+
     return Object.entries(errorCounts)
       .map(([category, count]) => ({ category, count }))
       .sort((a, b) => b.count - a.count);
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-eval-info mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading performance data...</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Loading states handled by React Query
 
   const modelPerformance = getModelPerformance();
   const taskPerformance = getTaskPerformance();
   const errorAnalysis = getErrorAnalysis();
-  const totalPassRate = filteredResults.length > 0 
-    ? (filteredResults.filter(r => r.passed).length / filteredResults.length) * 100 
+  const totalPassRate = filteredResults.length > 0
+    ? (filteredResults.filter(r => r.passed).length / filteredResults.length) * 100
     : 0;
 
   return (
@@ -241,13 +207,7 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
                 <div className="text-2xl font-bold">{totalPassRate.toFixed(1)}%</div>
                 <div className="text-sm text-muted-foreground">Pass Rate</div>
               </div>
-              <div className="flex items-center">
-                {metrics?.pass_rate_trend && metrics.pass_rate_trend > 0 ? (
-                  <TrendingUp className="h-4 w-4 text-eval-success" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-eval-error" />
-                )}
-              </div>
+              {/* Trend data from dashboardStats when available */}
             </div>
           </CardContent>
         </Card>
@@ -271,7 +231,7 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {filteredResults.length > 0 
+              {filteredResults.length > 0
                 ? Math.round(filteredResults.reduce((sum, r) => sum + r.latency_ms, 0) / filteredResults.length)
                 : 0
               }ms

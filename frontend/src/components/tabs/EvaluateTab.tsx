@@ -1,92 +1,59 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Play, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { EvalTask, Model, EvalResult } from '@/types';
-import { loadTasks, loadModels, loadResults } from '@/lib/data';
+import { Play, Clock } from 'lucide-react';
+import { useTasks } from '@/hooks/useTasks';
+import { useModels } from '@/hooks/useModels';
+import { useRunEvaluation, useRunStatus } from '@/hooks/useEvaluation';
 
 interface EvaluateTabProps {
   onRunEvaluation?: (taskIds: number[], modelIds: number[]) => void;
 }
 
 export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
-  const [tasks, setTasks] = useState<EvalTask[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
-  const [results, setResults] = useState<EvalResult[]>([]);
+  const { data: tasks = [] } = useTasks();
+  const { data: models = [] } = useModels();
+  const { mutate: runEvaluation, isPending: isRunning, data: runData } = useRunEvaluation();
+  const { data: runStatus } = useRunStatus(runData?.id || null);
+
   const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
   const [selectedModels, setSelectedModels] = useState<number[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [tasksData, modelsData, resultsData] = await Promise.all([
-          loadTasks(),
-          loadModels(),
-          loadResults(),
-        ]);
-        setTasks(tasksData);
-        setModels(modelsData);
-        setResults(resultsData);
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      }
-    };
-
-    loadData();
-  }, []);
-
-  const handleRunEvaluation = async () => {
+  const handleRunEvaluation = () => {
     if (selectedTasks.length === 0 || selectedModels.length === 0) {
       alert('Please select at least one task and one model');
       return;
     }
 
-    setIsRunning(true);
-    setProgress(0);
-
-    // Simulate evaluation progress
-    const totalSteps = selectedTasks.length * selectedModels.length;
-    let currentStep = 0;
-
-    const progressInterval = setInterval(() => {
-      currentStep++;
-      setProgress((currentStep / totalSteps) * 100);
-      
-      if (currentStep >= totalSteps) {
-        clearInterval(progressInterval);
-        setIsRunning(false);
-        setProgress(100);
-        onRunEvaluation?.(selectedTasks, selectedModels);
+    runEvaluation(
+      {
+        task_ids: selectedTasks,
+        model_ids: selectedModels,
+        run_name: `Run ${new Date().toLocaleString()}`,
+      },
+      {
+        onSuccess: () => {
+          // Clear selections after successful run
+          setSelectedTasks([]);
+          setSelectedModels([]);
+          if (onRunEvaluation) {
+            onRunEvaluation(selectedTasks, selectedModels);
+          }
+        },
       }
-    }, 1000);
-
-    // Simulate evaluation completion
-    setTimeout(() => {
-      clearInterval(progressInterval);
-      setIsRunning(false);
-      setProgress(100);
-    }, totalSteps * 1000);
+    );
   };
 
-  const getTaskName = (taskId: number) => {
-    return tasks.find(t => t.id === taskId)?.name || `Task ${taskId}`;
-  };
+  // Calculate progress from run status
+  const progress = runStatus
+    ? (runStatus.completed_tasks / runStatus.total_tasks) * 100
+    : 0;
 
-  const getModelName = (modelId: number) => {
-    return models.find(m => m.id === modelId)?.model_name || `Model ${modelId}`;
-  };
-
-  const getLatestResult = (taskId: number, modelId: number) => {
-    return results
-      .filter(r => r.task_id === taskId && r.model_id === modelId)
-      .sort((a, b) => new Date(b.evaluated_at).getTime() - new Date(a.evaluated_at).getTime())[0];
-  };
+  // Helper functions removed - results handled in ReviewPerformanceTab
 
   return (
     <div className="space-y-6">
@@ -221,56 +188,7 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
       </Card>
 
       {/* Recent Results Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Results</CardTitle>
-          <CardDescription>
-            Latest evaluation results for selected tasks and models
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {selectedTasks.length > 0 && selectedModels.length > 0 ? (
-              selectedTasks.map((taskId) =>
-                selectedModels.map((modelId) => {
-                  const result = getLatestResult(taskId, modelId);
-                  return (
-                    <div key={`${taskId}-${modelId}`} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <h4 className="font-medium">{getTaskName(taskId)}</h4>
-                        <p className="text-sm text-muted-foreground">{getModelName(modelId)}</p>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        {result ? (
-                          <>
-                            {result.passed ? (
-                              <CheckCircle className="h-5 w-5 text-eval-success" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-eval-error" />
-                            )}
-                            <span className="text-sm">
-                              {result.score ? (result.score * 100).toFixed(1) + '%' : 'N/A'}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(result.evaluated_at).toLocaleDateString()}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">No results yet</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )
-            ) : (
-              <p className="text-center text-muted-foreground py-8">
-                Select tasks and models to see recent results
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Recent Results - Check ReviewPerformanceTab after running evaluations */}
     </div>
   );
 }
