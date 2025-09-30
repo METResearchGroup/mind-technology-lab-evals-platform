@@ -167,7 +167,7 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
                   <Badge variant="outline">{model.provider}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Temp: {model.config.temperature || 'N/A'}
+                  Temp: {(model.config.temperature as number) ?? 'N/A'}
                 </p>
               </div>
             ))}
