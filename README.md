@@ -2,9 +2,14 @@
 
 A Python-based evaluation platform for the Mind and Technology Lab, built with modern tooling and best practices.
 
-## Quick Start
+## 📚 **Navigation**
 
-🚀 **New to this project?** Check out our detailed [SETUP.md](SETUP.md) guide for complete installation and configuration instructions.
+- 🗺️ **[ROUTER.md](ROUTER.md)** - Complete repository navigation guide and file index
+- 🤖 **[AI_AGENT_INSTRUCTIONS.md](AI_AGENT_INSTRUCTIONS.md)** - Guidelines for AI agents working on this repo
+- 🚀 **[SETUP.md](SETUP.md)** - Detailed installation and configuration instructions
+- 📋 **[BACKLOG.md](BACKLOG.md)** - Technical debt and future improvements
+
+## Quick Start
 
 ### Prerequisites
 - Python 3.12+
@@ -24,6 +29,8 @@ uv run python --version
 
 ## Project Structure
 
+See **[ROUTER.md](ROUTER.md)** for a complete navigation guide to all files and directories in this repository.
+
 This project uses modern Python tooling:
 - **uv**: Fast Python package manager and project management
 - **pyproject.toml**: Modern Python project configuration
@@ -35,7 +42,7 @@ This project uses modern Python tooling:
 # Add new dependencies
 uv add package-name
 
-# Add development dependencies  
+# Add development dependencies
 uv add --dev package-name
 
 # Run Python code
@@ -47,9 +54,8 @@ uv sync --upgrade
 
 ## Documentation
 
-- [SETUP.md](SETUP.md) - Complete setup and installation guide
-- [pyproject.toml](pyproject.toml) - Project configuration and dependencies
+- **[ROUTER.md](ROUTER.md)** - Repository navigation and file index
+- **[SETUP.md](SETUP.md)** - Complete setup and installation guide
+- **[BACKLOG.md](BACKLOG.md)** - Technical backlog and improvements
 
-## Getting Help
-
-For detailed setup instructions, troubleshooting, and development workflow, see [SETUP.md](SETUP.md).
+For specific project documentation, see the **[Evals Harness Platform project folder](projects/evals-harness-platform/)**.
