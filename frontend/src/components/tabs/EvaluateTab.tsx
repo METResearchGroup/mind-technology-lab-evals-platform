@@ -7,15 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Play, Clock, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Play, Clock, AlertTriangle, RotateCcw, Eye } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { useModels } from '@/hooks/useModels';
 import { useRunEvaluation, useRunStatus } from '@/hooks/useEvaluation';
 import { useResults } from '@/hooks/useResults';
 import { ResultsTable } from '@/components/tables/ResultsTable';
 import { ResultDetailModal } from '@/components/ui/ResultDetailModal';
+import { TaskDetailModal } from '@/components/ui/TaskDetailModal';
 import { estimateEvalRunCost, getCostWarningLevel, formatCost } from '@/lib/utils/cost-estimation';
-import type { EvalResult } from '@/types';
+import type { EvalResult, EvalTask } from '@/types';
 
 interface EvaluateTabProps {
   onRunEvaluation?: (taskIds: number[], modelIds: number[]) => void;
@@ -34,6 +35,7 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
   const [selectedModels, setSelectedModels] = useState<number[]>([]);
   const [runName, setRunName] = useState('');
   const [selectedResult, setSelectedResult] = useState<EvalResult | null>(null);
+  const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<EvalTask | null>(null);
 
   // Calculate cost estimation
   const costEstimate = estimateEvalRunCost(selectedTasks, selectedModels, tasks, models);
@@ -129,17 +131,31 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
                       {task.description}
                     </p>
                   )}
-                  <div className="flex flex-wrap gap-1">
-                    {task.tags.slice(0, 3).map((tag: string) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                    {task.tags.length > 3 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{task.tags.length - 3}
-                      </Badge>
-                    )}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex flex-wrap gap-1">
+                      {task.tags.slice(0, 3).map((tag: string) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {task.tags.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{task.tags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTaskForDetail(task);
+                      }}
+                      className="text-xs"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      See More
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -340,6 +356,13 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
         model={models.find((m) => m.id === selectedResult?.model_id) || null}
         open={!!selectedResult}
         onClose={() => setSelectedResult(null)}
+      />
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTaskForDetail}
+        open={!!selectedTaskForDetail}
+        onClose={() => setSelectedTaskForDetail(null)}
       />
     </div>
   );

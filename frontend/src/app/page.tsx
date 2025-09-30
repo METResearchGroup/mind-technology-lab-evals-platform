@@ -68,8 +68,8 @@ export default function Home() {
 
   const handleRunEvaluation = (taskIds: number[], modelIds: number[]) => {
     console.log('Running evaluation:', { taskIds, modelIds });
-    // In a real app, this would trigger an evaluation
-    alert(`Running evaluation with ${taskIds.length} tasks and ${modelIds.length} models! (This is dummy data)`);
+    // Evaluation is now handled by EvaluateTab component via useRunEvaluation hook
+    // No alert needed - results will display in the Evaluate tab
   };
 
   const handleExportResults = () => {
