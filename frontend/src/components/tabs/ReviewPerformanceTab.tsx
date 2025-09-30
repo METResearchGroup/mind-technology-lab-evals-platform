@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, XCircle, TrendingUp, TrendingDown, DollarSign, Download } from 'lucide-react';
+import { CheckCircle, XCircle, TrendingUp, TrendingDown, Download } from 'lucide-react';
 import { EvalTask, Model, EvalResult, DashboardMetrics } from '@/types';
 import { loadTasks, loadModels, loadResults, loadDashboardMetrics } from '@/lib/data';
 

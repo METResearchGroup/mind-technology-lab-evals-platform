@@ -22,7 +22,7 @@ export interface Model {
   provider: string;
   model_name: string;
   prompt_version: string;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   api_key_hash?: string;
   created_at: string;
 }

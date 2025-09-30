@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, CheckCircle } from 'lucide-react';
 import { Model } from '@/types';
 import { loadModels } from '@/lib/data';
 
@@ -72,7 +72,7 @@ export function ViewModelsTab({
     );
   };
 
-  const getConfigSummary = (config: Record<string, any>) => {
+  const getConfigSummary = (config: Record<string, unknown>) => {
     const parts = [];
     if (config.temperature !== undefined) parts.push(`T: ${config.temperature}`);
     if (config.max_tokens !== undefined) parts.push(`Tokens: ${config.max_tokens}`);

@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, XCircle, Search, Filter, Play, Edit, Trash2 } from 'lucide-react';
+import { CheckCircle, XCircle, Search, Play, Edit } from 'lucide-react';
 import { EvalTask, Model, EvalResult } from '@/types';
 
 interface ResultsTableProps {
@@ -23,7 +23,6 @@ interface ResultsTableProps {
   models: Model[];
   onRunEvaluation?: (taskId: number, modelId: number) => void;
   onEditTask?: (taskId: number) => void;
-  onDeleteTask?: (taskId: number) => void;
 }
 
 export function ResultsTable({ 
@@ -31,8 +30,7 @@ export function ResultsTable({
   tasks, 
   models, 
   onRunEvaluation,
-  onEditTask,
-  onDeleteTask 
+  onEditTask
 }: ResultsTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'passed' | 'failed'>('all');
@@ -111,7 +109,7 @@ export function ResultsTable({
             </div>
           </div>
           
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as any)}>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'passed' | 'failed')}>
             <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Status" />
             </SelectTrigger>

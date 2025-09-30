@@ -8,18 +8,16 @@ import { TaskForm } from '@/components/forms/TaskForm';
 import { ModelForm } from '@/components/forms/ModelForm';
 import { EvaluateTab } from '@/components/tabs/EvaluateTab';
 import { ViewTasksTab } from '@/components/tabs/ViewTasksTab';
-import { ViewModelsTab } from '@/components/tabs/ViewModelsTab';
 import { ReviewPerformanceTab } from '@/components/tabs/ReviewPerformanceTab';
-import { ResultsTable } from '@/components/tables/ResultsTable';
-import { DashboardMetrics, TaskFormData, ModelFormData } from '@/types';
+import { DashboardMetrics, TaskFormData, ModelFormData, EvalTask, Model, EvalResult } from '@/types';
 import { loadDashboardMetrics, loadTasks, loadModels, loadResults } from '@/lib/data';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('evaluate');
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [tasks, setTasks] = useState<any[]>([]);
-  const [models, setModels] = useState<any[]>([]);
-  const [results, setResults] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<EvalTask[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [results, setResults] = useState<EvalResult[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

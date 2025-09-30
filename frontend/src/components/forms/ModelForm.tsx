@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle } from 'lucide-react';
 import { ModelFormData } from '@/types';
 
 const modelFormSchema = z.object({
@@ -62,7 +62,7 @@ export function ModelForm({ onSubmit, loading = false, initialData }: ModelFormP
       // Simulate API test
       await new Promise(resolve => setTimeout(resolve, 2000));
       setTestStatus('success');
-    } catch (error) {
+    } catch {
       setTestStatus('error');
     }
   };
