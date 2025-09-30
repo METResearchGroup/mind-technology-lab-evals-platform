@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>Evals Harness Platform</title>
+        <title>Mind and Technology Lab Evaluation Platform</title>
         <meta
           name="description"
           content="LLM Evaluation Dashboard for rapid iteration and model comparison"
