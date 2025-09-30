@@ -159,11 +159,14 @@ class OpenRouterClient:
                 prompt_tokens = usage.get("prompt_tokens", 0)
                 completion_tokens = usage.get("completion_tokens", 0)
 
-                # Cost calculation (PLACEHOLDER - actual rates vary by model)
-                # TODO: Implement model-specific pricing from OpenRouter API
-                # Current rates are rough estimates and NOT accurate for budget tracking
-                # Real pricing: GPT-4 (~$0.03/1k prompt), GPT-3.5 (~$0.002/1k prompt)
-                cost_usd = prompt_tokens * 0.00001 + completion_tokens * 0.00003
+                # Calculate cost using model-specific pricing
+                from app.utils.pricing import calculate_cost
+
+                cost_usd = calculate_cost(
+                    model_name=payload["model"],
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                )
 
                 logger.info(
                     f"OpenRouter API call successful: {prompt_tokens + completion_tokens} tokens, "

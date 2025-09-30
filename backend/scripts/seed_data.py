@@ -105,31 +105,37 @@ DUMMY_TASKS = [
     },
 ]
 
-# Dummy models for testing different providers
+# Dummy models for testing different providers (using latest 2024/2025 models)
 DUMMY_MODELS = [
     {
         "provider": "openrouter",
-        "model_name": "openai/gpt-3.5-turbo",
+        "model_name": "openai/gpt-4o-mini",
         "prompt_version": "v1.0",
         "config": json.dumps({"temperature": 0.7, "max_tokens": 500}),
     },
     {
         "provider": "openrouter",
-        "model_name": "openai/gpt-4",
+        "model_name": "openai/gpt-4o",
         "prompt_version": "v1.0",
         "config": json.dumps({"temperature": 0.5, "max_tokens": 1000}),
     },
     {
         "provider": "openrouter",
-        "model_name": "anthropic/claude-3-opus",
+        "model_name": "anthropic/claude-3.5-sonnet",
         "prompt_version": "v1.0",
         "config": json.dumps({"temperature": 0.7, "max_tokens": 1000}),
     },
     {
         "provider": "openrouter",
-        "model_name": "anthropic/claude-3-sonnet",
+        "model_name": "anthropic/claude-3.5-haiku",
         "prompt_version": "v1.0",
         "config": json.dumps({"temperature": 0.3, "max_tokens": 500}),
+    },
+    {
+        "provider": "openrouter",
+        "model_name": "google/gemini-flash-1.5",
+        "prompt_version": "v1.0",
+        "config": json.dumps({"temperature": 0.5, "max_tokens": 800}),
     },
 ]
 
