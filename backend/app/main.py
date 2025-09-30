@@ -46,13 +46,15 @@ app.include_router(results.router, prefix=settings.api_v1_prefix)
 @app.on_event("startup")
 def startup_event() -> None:
     """Initialize application on startup."""
+    import os
+
     logger.info("Starting up application...")
     # Skip database initialization during testing
-    if not settings.debug or settings.database_url != "sqlite:///:memory:":
+    if os.getenv("TESTING") == "true":
+        logger.info("Skipping database initialization (test mode)")
+    else:
         init_db()
         logger.info("Database initialized")
-    else:
-        logger.info("Skipping database initialization (test mode)")
 
 
 @app.on_event("shutdown")

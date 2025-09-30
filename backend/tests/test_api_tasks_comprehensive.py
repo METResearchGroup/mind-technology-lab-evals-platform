@@ -4,6 +4,8 @@ Tests cover various scenarios for task creation, including edge cases,
 validation, and data serialization to ensure maximal robustness.
 
 Following AI Evals Methodology Expert guidance on comprehensive test coverage.
+
+Uses fixtures from conftest.py for proper database setup.
 """
 
 import time
@@ -34,20 +36,24 @@ class TestTaskCreation:
         result = response.json()
         assert result["name"] == task_data["name"]
         assert result["description"] == task_data["description"]
-        assert result["tags"] == task_data["tags"]  # Should be deserialized back to list
+        assert result["tags"] == task_data["tags"]
         assert result["project"] == task_data["project"]
         assert "id" in result
         assert "created_at" in result
         assert "updated_at" in result
 
     def test_create_task_with_empty_tags(self, client):
-        """Test creating task with empty tags array (bug fix regression test)."""
+        """Test creating task with empty tags array (bug fix regression test).
+
+        This is a critical regression test for the bug where empty tags arrays
+        caused SQLite errors due to incorrect conversion logic.
+        """
         task_data = {
             "name": "Task With Empty Tags",
             "input": "Test input",
             "task_type": "classification",
             "evaluation_method": "code",
-            "tags": [],  # Empty array should work
+            "tags": [],  # Empty array - was causing SQLite error before fix
             "project": "test-project",
         }
 
@@ -55,7 +61,7 @@ class TestTaskCreation:
 
         assert response.status_code == 201
         result = response.json()
-        assert result["tags"] == []  # Should remain empty array
+        assert result["tags"] == []
         assert result["name"] == task_data["name"]
 
     def test_create_task_with_single_tag(self, client):
@@ -77,7 +83,7 @@ class TestTaskCreation:
         assert result["project"] == "mirrorview"
 
     def test_create_task_with_many_tags(self, client):
-        """Test creating task with many tags (10+)."""
+        """Test creating task with many tags (15 tags)."""
         tags = [f"tag_{i}" for i in range(15)]
         task_data = {
             "name": "Many Tags Task",
@@ -112,7 +118,7 @@ class TestTaskCreation:
         assert result["expected_output"] is None
         assert result["ground_truth"] is None
         assert result["rubric"] is None
-        assert result["tags"] == []  # Should default to empty array
+        assert result["tags"] == []
         assert result["project"] is None
 
     def test_create_task_with_special_characters(self, client):
@@ -235,7 +241,11 @@ class TestTaskCreationRealWorldScenarios:
     """Tests for real-world task creation scenarios."""
 
     def test_create_mirrorview_task(self, client):
-        """Test creating a task for mirrorview project with production_data tag."""
+        """Test creating a task for mirrorview project with production_data tag.
+
+        This tests the exact scenario the user is trying to accomplish:
+        adding a real research task to the mirrorview project.
+        """
         task_data = {
             "name": "Mirrorview Research Task",
             "description": "Real research task for mirrorview project",
@@ -401,3 +411,30 @@ class TestTaskTimestamps:
         result = update_response.json()
         assert result["created_at"] == created_at  # Should not change
         assert result["updated_at"] >= initial_updated_at  # Should be same or newer
+
+
+class TestTaskConcurrency:
+    """Tests for concurrent task operations."""
+
+    def test_rapid_task_creation(self, client):
+        """Test creating multiple tasks rapidly."""
+        tasks_created = []
+        for i in range(5):
+            task_data = {
+                "name": f"Rapid Task {i}",
+                "input": f"Input {i}",
+                "task_type": "classification",
+                "evaluation_method": "code",
+                "tags": [f"rapid_{i}"],
+            }
+            response = client.post("/api/tasks", json=task_data)
+            assert response.status_code == 201
+            tasks_created.append(response.json())
+
+        # Verify all have unique IDs
+        ids = [task["id"] for task in tasks_created]
+        assert len(ids) == len(set(ids))  # All unique
+
+        # Verify all are in database
+        list_response = client.get("/api/tasks")
+        assert len(list_response.json()) == 5
