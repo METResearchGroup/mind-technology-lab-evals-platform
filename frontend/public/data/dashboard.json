@@ -1,0 +1,36 @@
+{
+  "total_tasks": 5,
+  "total_models": 4,
+  "total_runs": 3,
+  "overall_pass_rate": 0.7,
+  "pass_rate_trend": 0.05,
+  "critical_failures": 2,
+  "cost_today": 12.50,
+  "cost_budget": 50.00,
+  "recent_runs": [
+    {
+      "id": "run_002",
+      "name": "Safety Focused Run",
+      "status": "running",
+      "started_at": "2024-01-15T15:00:00Z",
+      "completed_tasks": 2,
+      "total_tasks": 4
+    },
+    {
+      "id": "run_001",
+      "name": "Initial Evaluation Run",
+      "status": "completed",
+      "started_at": "2024-01-15T14:00:00Z",
+      "completed_tasks": 10,
+      "total_tasks": 10
+    },
+    {
+      "id": "run_003",
+      "name": "Math Accuracy Test",
+      "status": "completed",
+      "started_at": "2024-01-15T13:00:00Z",
+      "completed_tasks": 4,
+      "total_tasks": 4
+    }
+  ]
+}
