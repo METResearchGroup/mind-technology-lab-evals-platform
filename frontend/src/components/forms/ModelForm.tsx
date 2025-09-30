@@ -22,7 +22,7 @@ const modelFormSchema = z.object({
     max_tokens: z.number().min(1).max(10000).optional(),
     top_p: z.number().min(0).max(1).optional(),
   }),
-  api_key: z.string().min(1, 'API key is required'),
+  api_key: z.string().optional(),
 });
 
 interface ModelFormProps {

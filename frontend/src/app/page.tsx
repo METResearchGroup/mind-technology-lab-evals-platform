@@ -9,30 +9,19 @@ import { ModelForm } from '@/components/forms/ModelForm';
 import { EvaluateTab } from '@/components/tabs/EvaluateTab';
 import { ViewTasksTab } from '@/components/tabs/ViewTasksTab';
 import { ReviewPerformanceTab } from '@/components/tabs/ReviewPerformanceTab';
-import { DashboardMetrics, TaskFormData, ModelFormData, EvalTask, Model, EvalResult } from '@/types';
-import { loadDashboardMetrics, loadTasks, loadModels, loadResults } from '@/lib/data';
+import { DashboardMetrics, TaskFormData, ModelFormData } from '@/types';
+import { loadDashboardMetrics } from '@/lib/data';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('evaluate');
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [tasks, setTasks] = useState<EvalTask[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
-  const [results, setResults] = useState<EvalResult[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [metricsData, tasksData, modelsData, resultsData] = await Promise.all([
-          loadDashboardMetrics(),
-          loadTasks(),
-          loadModels(),
-          loadResults(),
-        ]);
+        const metricsData = await loadDashboardMetrics();
         setMetrics(metricsData);
-        setTasks(tasksData);
-        setModels(modelsData);
-        setResults(resultsData);
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {
