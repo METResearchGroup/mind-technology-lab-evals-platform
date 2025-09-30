@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { DashboardLayout, TabNavigation } from '@/components/layout/DashboardLayout';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -9,39 +9,61 @@ import { ModelForm } from '@/components/forms/ModelForm';
 import { EvaluateTab } from '@/components/tabs/EvaluateTab';
 import { ViewTasksTab } from '@/components/tabs/ViewTasksTab';
 import { ReviewPerformanceTab } from '@/components/tabs/ReviewPerformanceTab';
-import { DashboardMetrics, TaskFormData, ModelFormData } from '@/types';
-import { loadDashboardMetrics } from '@/lib/data';
+import { TaskFormData, ModelFormData } from '@/types';
+import { useCreateTask } from '@/hooks/useTasks';
+import { useCreateModel } from '@/hooks/useModels';
+import { useDashboardStats } from '@/hooks/useResults';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('evaluate');
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const metricsData = await loadDashboardMetrics();
-        setMetrics(metricsData);
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+  const { data: dashboardStats } = useDashboardStats();
+  const { mutate: createTask, isPending: isCreatingTask } = useCreateTask();
+  const { mutate: createModel, isPending: isCreatingModel } = useCreateModel();
 
   const handleTaskSubmit = (data: TaskFormData) => {
-    console.log('Task submitted:', data);
-    // In a real app, this would make an API call
-    alert('Task saved successfully! (This is dummy data)');
+    createTask(
+      {
+        name: data.name,
+        input: data.input,
+        task_type: data.task_type,
+        evaluation_method: data.evaluation_method,
+        description: data.description,
+        expected_output: data.expected_output,
+        ground_truth: data.ground_truth,
+        rubric: data.rubric,
+        tags: data.tags,
+        project: data.project,
+      },
+      {
+        onSuccess: () => {
+          alert('✅ Task saved successfully!');
+          setActiveTab('view-tasks');
+        },
+        onError: (error: Error) => {
+          alert(`❌ Failed to save task: ${error.message}`);
+        },
+      }
+    );
   };
 
   const handleModelSubmit = (data: ModelFormData) => {
-    console.log('Model submitted:', data);
-    // In a real app, this would make an API call
-    alert('Model saved successfully! (This is dummy data)');
+    createModel(
+      {
+        provider: data.provider,
+        model_name: data.model_name,
+        prompt_version: data.prompt_version,
+        config: data.config,
+      },
+      {
+        onSuccess: () => {
+          alert('✅ Model saved successfully!');
+          setActiveTab('evaluate');
+        },
+        onError: (error: Error) => {
+          alert(`❌ Failed to save model: ${error.message}`);
+        },
+      }
+    );
   };
 
   const handleRunEvaluation = (taskIds: number[], modelIds: number[]) => {
@@ -56,23 +78,12 @@ export default function Home() {
     alert('Results exported successfully! (This is dummy data)');
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-eval-info mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading evaluation platform...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <ErrorBoundary>
-      <DashboardLayout metrics={metrics || undefined}>
+      <DashboardLayout>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-          
+
           <div className="mt-6">
             <TabsContent value="evaluate" className="space-y-6">
               <ErrorBoundary>
@@ -82,13 +93,13 @@ export default function Home() {
 
             <TabsContent value="add-task" className="space-y-6">
               <ErrorBoundary>
-                <TaskForm onSubmit={handleTaskSubmit} />
+                <TaskForm onSubmit={handleTaskSubmit} loading={isCreatingTask} />
               </ErrorBoundary>
             </TabsContent>
 
             <TabsContent value="view-tasks" className="space-y-6">
               <ErrorBoundary>
-                <ViewTasksTab 
+                <ViewTasksTab
                   onAddTask={() => setActiveTab('add-task')}
                   onEditTask={(id) => console.log('Edit task:', id)}
                   onDeleteTask={(id) => console.log('Delete task:', id)}
@@ -99,7 +110,7 @@ export default function Home() {
 
             <TabsContent value="add-model" className="space-y-6">
               <ErrorBoundary>
-                <ModelForm onSubmit={handleModelSubmit} />
+                <ModelForm onSubmit={handleModelSubmit} loading={isCreatingModel} />
               </ErrorBoundary>
             </TabsContent>
 

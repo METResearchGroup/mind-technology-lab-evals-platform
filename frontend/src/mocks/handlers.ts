@@ -70,7 +70,7 @@ export const handlers = [
   }),
 
   http.post(`${API_URL}/api/tasks`, async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const newTask = {
       id: mockTasks.length + 1,
       task_version: 'v1.0',
@@ -78,7 +78,7 @@ export const handlers = [
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    mockTasks.push(newTask as any);
+    mockTasks.push(newTask as typeof mockTasks[0]);
     return HttpResponse.json(newTask, { status: 201 });
   }),
 
@@ -96,13 +96,13 @@ export const handlers = [
   }),
 
   http.post(`${API_URL}/api/models`, async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const newModel = {
       id: mockModels.length + 1,
       ...body,
       created_at: new Date().toISOString(),
     };
-    mockModels.push(newModel as any);
+    mockModels.push(newModel as typeof mockModels[0]);
     return HttpResponse.json(newModel, { status: 201 });
   }),
 
@@ -113,18 +113,18 @@ export const handlers = [
 
   // Evaluation endpoints
   http.post(`${API_URL}/api/evaluate`, async ({ request }) => {
-    const body = await request.json();
+    const body = (await request.json()) as { run_name?: string; task_ids?: number[]; model_ids?: number[] };
     const runId = `run-${Date.now()}`;
     return HttpResponse.json({
       id: runId,
-      name: (body as any).run_name || 'Evaluation Run',
+      name: body.run_name || 'Evaluation Run',
       description: null,
-      task_ids: (body as any).task_ids || [],
-      model_ids: (body as any).model_ids || [],
+      task_ids: body.task_ids || [],
+      model_ids: body.model_ids || [],
       status: 'running',
       started_at: new Date().toISOString(),
       completed_at: null,
-      total_tasks: ((body as any).task_ids?.length || 0) * ((body as any).model_ids?.length || 0),
+      total_tasks: (body.task_ids?.length || 0) * (body.model_ids?.length || 0),
       completed_tasks: 0,
       failed_tasks: 0,
     });
