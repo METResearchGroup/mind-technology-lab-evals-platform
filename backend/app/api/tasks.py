@@ -67,9 +67,9 @@ def create_task(
     Returns:
         Created task
     """
-    # Convert tags to JSON string
+    # Convert tags to JSON string (even if empty)
     task_dict = task_data.model_dump()
-    if task_dict.get("tags"):
+    if "tags" in task_dict:
         task_dict["tags"] = json.dumps(task_dict["tags"])
 
     task = EvalTask(**task_dict)
