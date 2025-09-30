@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Plus, Edit, Trash2, Play } from 'lucide-react';
 import { EvalTask } from '@/types';
-import { loadTasks } from '@/lib/data';
+import { useTasks } from '@/hooks/useTasks';
 
 interface ViewTasksTabProps {
   onAddTask?: () => void;
@@ -18,41 +18,25 @@ interface ViewTasksTabProps {
   onRunTask?: (taskId: number) => void;
 }
 
-export function ViewTasksTab({ 
-  onAddTask, 
-  onEditTask, 
-  onDeleteTask, 
-  onRunTask 
+export function ViewTasksTab({
+  onAddTask,
+  onEditTask,
+  onDeleteTask,
+  onRunTask
 }: ViewTasksTabProps) {
-  const [tasks, setTasks] = useState<EvalTask[]>([]);
+  const { data: tasks = [], isLoading: loading, error } = useTasks();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const tasksData = await loadTasks();
-        setTasks(tasksData);
-      } catch (error) {
-        console.error('Failed to load tasks:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
 
   // Filter tasks based on search and filters
   const filteredTasks = tasks.filter(task => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+      task.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+
     const matchesType = typeFilter === 'all' || task.task_type === typeFilter;
     const matchesMethod = methodFilter === 'all' || task.evaluation_method === methodFilter;
     const matchesProject = projectFilter === 'all' || task.project === projectFilter;
@@ -79,7 +63,7 @@ export function ViewTasksTab({
       llm_judge: 'text-eval-warning',
       hybrid: 'text-eval-success',
     };
-    
+
     return (
       <Badge variant="outline" className={`text-xs ${colors[method as keyof typeof colors]}`}>
         {method}
@@ -94,6 +78,19 @@ export function ViewTasksTab({
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-eval-info mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading tasks...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <p className="text-red-500 mb-2">Failed to load tasks</p>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
           </div>
         </CardContent>
       </Card>
@@ -223,7 +220,7 @@ export function ViewTasksTab({
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {task.tags.slice(0, 3).map((tag) => (
+                        {task.tags.slice(0, 3).map((tag: string) => (
                           <Badge key={tag} variant="secondary" className="text-xs">
                             {tag}
                           </Badge>
