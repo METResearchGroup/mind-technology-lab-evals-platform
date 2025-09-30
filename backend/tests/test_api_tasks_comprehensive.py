@@ -72,7 +72,7 @@ class TestTaskCreation:
             "task_type": "classification",
             "evaluation_method": "code",
             "tags": ["production_data"],
-            "project": "mirrorview",
+            "project": "research-project-alpha",
         }
 
         response = client.post("/api/tasks", json=task_data)
@@ -80,7 +80,7 @@ class TestTaskCreation:
         assert response.status_code == 201
         result = response.json()
         assert result["tags"] == ["production_data"]
-        assert result["project"] == "mirrorview"
+        assert result["project"] == "research-project-alpha"
 
     def test_create_task_with_many_tags(self, client):
         """Test creating task with many tags (15 tags)."""
@@ -240,22 +240,22 @@ class TestTaskCreationValidation:
 class TestTaskCreationRealWorldScenarios:
     """Tests for real-world task creation scenarios."""
 
-    def test_create_mirrorview_task(self, client):
-        """Test creating a task for mirrorview project with production_data tag.
+    def test_create_production_research_task(self, client):
+        """Test creating a production research task with multiple tags.
 
-        This tests the exact scenario the user is trying to accomplish:
-        adding a real research task to the mirrorview project.
+        This tests real-world scenario of adding actual research data
+        with proper tagging for any research project.
         """
         task_data = {
-            "name": "Mirrorview Research Task",
-            "description": "Real research task for mirrorview project",
+            "name": "Production Research Task",
+            "description": "Real research task for active project",
             "input": "Analyze the relationship between X and Y in context Z",
             "expected_output": "X influences Y through mechanism Z",
             "task_type": "generation",
             "evaluation_method": "llm_judge",
             "rubric": "Response should: 1) Identify relationship, 2) Explain mechanism, 3) Provide evidence",
-            "tags": ["production_data", "mirrorview", "research"],
-            "project": "mirrorview",
+            "tags": ["production_data", "cognitive-science", "research"],
+            "project": "research-project-alpha",
             "task_version": "v1.0",
         }
 
@@ -263,9 +263,9 @@ class TestTaskCreationRealWorldScenarios:
 
         assert response.status_code == 201
         result = response.json()
-        assert result["project"] == "mirrorview"
+        assert result["project"] == "research-project-alpha"
         assert "production_data" in result["tags"]
-        assert "mirrorview" in result["tags"]
+        assert "cognitive-science" in result["tags"]
         assert len(result["tags"]) == 3
 
     def test_create_mock_data_task(self, client):
