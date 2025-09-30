@@ -95,9 +95,12 @@ export function ReviewPerformanceTab({ onExportResults }: ReviewPerformanceTabPr
   };
 
   const calculateRunPassRate = (run: EvalRun) => {
-    const passed = run.completed_tasks - run.failed_tasks;
-    const total = run.total_tasks || 1;
-    return ((passed / total) * 100).toFixed(0);
+    // Get actual results for this run to calculate real pass rate
+    const runResults = allResults.filter(r => r.run_id === run.id);
+    if (runResults.length === 0) return '0';
+
+    const passedCount = runResults.filter(r => r.passed).length;
+    return ((passedCount / runResults.length) * 100).toFixed(0);
   };
 
   const calculateRunCost = (runId: string) => {
