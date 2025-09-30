@@ -1,238 +1,180 @@
 'use client';
 
-import { useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, XCircle, Search, Play, Edit } from 'lucide-react';
-import { EvalTask, Model, EvalResult } from '@/types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { EvalResult, EvalTask, Model } from '@/types';
 
 interface ResultsTableProps {
   results: EvalResult[];
   tasks: EvalTask[];
   models: Model[];
-  onRunEvaluation?: (taskId: number, modelId: number) => void;
-  onEditTask?: (taskId: number) => void;
+  showSummary?: boolean;
+  onResultClick?: (result: EvalResult) => void;
 }
 
-export function ResultsTable({ 
-  results, 
-  tasks, 
-  models, 
-  onRunEvaluation,
-  onEditTask
+export function ResultsTable({
+  results,
+  tasks,
+  models,
+  showSummary = true,
+  onResultClick,
 }: ResultsTableProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'passed' | 'failed'>('all');
-  const [modelFilter, setModelFilter] = useState<string>('all');
+  const getTaskName = (taskId: number) =>
+    tasks.find((t) => t.id === taskId)?.name || `Task ${taskId}`;
 
-  // Filter results based on search and filters
-  const filteredResults = results.filter(result => {
-    const task = tasks.find(t => t.id === result.task_id);
-    const model = models.find(m => m.id === result.model_id);
-    
-    const matchesSearch = !searchTerm || 
-      task?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      model?.model_name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || 
-      (statusFilter === 'passed' && result.passed === true) ||
-      (statusFilter === 'failed' && result.passed === false);
-    
-    const matchesModel = modelFilter === 'all' || 
-      model?.model_name === modelFilter;
+  const getModelName = (modelId: number) =>
+    models.find((m) => m.id === modelId)?.model_name || `Model ${modelId}`;
 
-    return matchesSearch && matchesStatus && matchesModel;
-  });
+  const getEvaluationMethod = (taskId: number) =>
+    tasks.find((t) => t.id === taskId)?.evaluation_method || 'unknown';
 
-  const getTaskName = (taskId: number) => {
-    return tasks.find(t => t.id === taskId)?.name || `Task ${taskId}`;
+  const truncateOutput = (output: string, maxLength = 100) => {
+    if (output.length <= maxLength) return output;
+    return output.slice(0, maxLength) + '...';
   };
 
-  const getModelName = (modelId: number) => {
-    return models.find(m => m.id === modelId)?.model_name || `Model ${modelId}`;
+  const formatLatency = (ms: number) => {
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
   };
 
-  const getStatusBadge = (passed?: boolean) => {
-    if (passed === true) {
-      return (
-        <Badge variant="outline" className="text-eval-success border-eval-success">
-          <CheckCircle className="h-3 w-3 mr-1" />
-          Pass
-        </Badge>
-      );
-    } else if (passed === false) {
-      return (
-        <Badge variant="outline" className="text-eval-error border-eval-error">
-          <XCircle className="h-3 w-3 mr-1" />
-          Fail
-        </Badge>
-      );
-    }
+  const formatCost = (cost: number) => {
+    if (cost < 0.01) return `$${cost.toFixed(4)}`;
+    if (cost < 1) return `$${cost.toFixed(3)}`;
+    return `$${cost.toFixed(2)}`;
+  };
+
+  const getScoreBadgeColor = (score: number | null | undefined) => {
+    if (score === null || score === undefined) return 'secondary';
+    if (score >= 0.8) return 'default';
+    if (score >= 0.5) return 'secondary';
+    return 'destructive';
+  };
+
+  // Calculate summary stats
+  const passedCount = results.filter((r) => r.passed).length;
+  const failedCount = results.filter((r) => !r.passed).length;
+  const totalCost = results.reduce((sum, r) => sum + (r.cost_usd || 0), 0);
+  const avgLatency =
+    results.length > 0
+      ? results.reduce((sum, r) => sum + (r.latency_ms || 0), 0) / results.length
+      : 0;
+  const avgScore =
+    results.length > 0
+      ? results.reduce((sum, r) => sum + (r.score || 0), 0) / results.length
+      : 0;
+
+  if (results.length === 0) {
     return (
-      <Badge variant="outline" className="text-muted-foreground">
-        Unknown
-      </Badge>
+      <div className="text-center py-8 text-muted-foreground">
+        No results to display.
+      </div>
     );
-  };
+  }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle>Evaluation Results</CardTitle>
-        <CardDescription>
-          View and analyze evaluation results across all tasks and models
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search tasks or models..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'passed' | 'failed')}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="passed">Passed</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={modelFilter} onValueChange={setModelFilter}>
-            <SelectTrigger className="w-full sm:w-40">
-              <SelectValue placeholder="Model" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Models</SelectItem>
-              {models.map(model => (
-                <SelectItem key={model.id} value={model.model_name}>
-                  {model.model_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Results Table */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Task</TableHead>
-                <TableHead>Model</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Latency</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>Error Category</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredResults.map((result) => (
-                <TableRow key={result.id}>
-                  <TableCell className="font-medium">
-                    {getTaskName(result.task_id)}
-                  </TableCell>
-                  <TableCell>{getModelName(result.model_id)}</TableCell>
-                  <TableCell>{getStatusBadge(result.passed)}</TableCell>
-                  <TableCell>
-                    {result.score !== undefined ? (result.score * 100).toFixed(1) + '%' : 'N/A'}
-                  </TableCell>
-                  <TableCell>{result.latency_ms}ms</TableCell>
-                  <TableCell>${result.cost_usd.toFixed(4)}</TableCell>
-                  <TableCell>
-                    {result.error_category ? (
-                      <Badge variant="outline" className="text-eval-warning">
-                        {result.error_category}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onRunEvaluation?.(result.task_id, result.model_id)}
-                      >
-                        <Play className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onEditTask?.(result.task_id)}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
+    <div className="space-y-4">
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Task</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead>Output</TableHead>
+              <TableHead>Method</TableHead>
+              <TableHead>Result</TableHead>
+              <TableHead>Score</TableHead>
+              <TableHead>Cost</TableHead>
+              <TableHead>Latency</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {results.map((result) => (
+              <TableRow key={result.id} className="hover:bg-muted/50">
+                <TableCell className="font-medium">
+                  {getTaskName(result.task_id)}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {getModelName(result.model_id)}
+                </TableCell>
+                <TableCell className="max-w-md">
+                  <div className="text-sm text-muted-foreground font-mono">
+                    {truncateOutput(result.model_output)}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="text-xs">
+                    {getEvaluationMethod(result.task_id)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  {result.passed ? (
+                    <div className="flex items-center text-green-600">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      <span className="text-xs">Pass</span>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  ) : (
+                    <div className="flex items-center text-red-600">
+                      <XCircle className="h-4 w-4 mr-1" />
+                      <span className="text-xs">Fail</span>
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Badge variant={getScoreBadgeColor(result.score)}>
+                    {result.score !== null && result.score !== undefined
+                      ? result.score.toFixed(2)
+                      : 'N/A'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm">
+                  {formatCost(result.cost_usd || 0)}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {formatLatency(result.latency_ms || 0)}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onResultClick?.(result)}
+                  >
+                    <Eye className="h-3 w-3" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-        {filteredResults.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            No results found matching your criteria.
+      {showSummary && (
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="text-center p-3 bg-muted rounded-lg">
+            <div className="text-2xl font-bold text-green-600">{passedCount}</div>
+            <div className="text-xs text-muted-foreground">Passed</div>
           </div>
-        )}
-
-        {/* Summary Stats */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-eval-success">
-              {filteredResults.filter(r => r.passed === true).length}
-            </div>
-            <div className="text-sm text-muted-foreground">Passed</div>
+          <div className="text-center p-3 bg-muted rounded-lg">
+            <div className="text-2xl font-bold text-red-600">{failedCount}</div>
+            <div className="text-xs text-muted-foreground">Failed</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-eval-error">
-              {filteredResults.filter(r => r.passed === false).length}
-            </div>
-            <div className="text-sm text-muted-foreground">Failed</div>
+          <div className="text-center p-3 bg-muted rounded-lg">
+            <div className="text-2xl font-bold">{formatCost(totalCost)}</div>
+            <div className="text-xs text-muted-foreground">Total Cost</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">
-              {filteredResults.length > 0 
-                ? (filteredResults.filter(r => r.passed === true).length / filteredResults.length * 100).toFixed(1) + '%'
-                : '0%'
-              }
-            </div>
-            <div className="text-sm text-muted-foreground">Pass Rate</div>
+          <div className="text-center p-3 bg-muted rounded-lg">
+            <div className="text-2xl font-bold">{formatLatency(avgLatency)}</div>
+            <div className="text-xs text-muted-foreground">Avg Latency</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold">
-              ${filteredResults.reduce((sum, r) => sum + r.cost_usd, 0).toFixed(2)}
-            </div>
-            <div className="text-sm text-muted-foreground">Total Cost</div>
+          <div className="text-center p-3 bg-muted rounded-lg">
+            <div className="text-2xl font-bold">{avgScore.toFixed(2)}</div>
+            <div className="text-xs text-muted-foreground">Avg Score</div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }

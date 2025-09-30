@@ -12,11 +12,11 @@ import { ReviewPerformanceTab } from '@/components/tabs/ReviewPerformanceTab';
 import { TaskFormData, ModelFormData } from '@/types';
 import { useCreateTask } from '@/hooks/useTasks';
 import { useCreateModel } from '@/hooks/useModels';
-import { useDashboardStats } from '@/hooks/useResults';
+// import { useDashboardStats } from '@/hooks/useResults'; // Not used yet
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('evaluate');
-  const { data: dashboardStats } = useDashboardStats();
+  // const { data: dashboardStats } = useDashboardStats(); // Not used yet
   const { mutate: createTask, isPending: isCreatingTask } = useCreateTask();
   const { mutate: createModel, isPending: isCreatingModel } = useCreateModel();
 

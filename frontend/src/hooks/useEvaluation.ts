@@ -50,5 +50,6 @@ export function useRuns() {
   return useQuery({
     queryKey: ["runs"],
     queryFn: evaluationService.getRuns,
+    staleTime: 1000 * 60, // 1 minute
   });
 }

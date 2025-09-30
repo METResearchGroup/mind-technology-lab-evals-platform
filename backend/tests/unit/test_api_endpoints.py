@@ -219,3 +219,22 @@ def test_list_results_with_filters(client: TestClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
+
+
+# Evaluation Runs API Tests
+
+
+def test_list_runs_empty(client: TestClient) -> None:
+    """Test listing runs when none exist."""
+    response = client.get("/api/evaluate/runs")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_list_runs_with_limit(client: TestClient) -> None:
+    """Test listing runs respects limit parameter."""
+    response = client.get("/api/evaluate/runs?limit=50")
+    assert response.status_code == 200
+    runs = response.json()
+    assert isinstance(runs, list)
+    assert len(runs) <= 50
