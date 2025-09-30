@@ -1,6 +1,7 @@
 """OpenRouter API client with retry logic and error handling."""
 
 import logging
+import threading
 import time
 from typing import Any
 
@@ -36,14 +37,20 @@ class OpenRouterClient:
     _consecutive_failures = 0
     _circuit_breaker_threshold = 5
     _last_failure_time: float | None = None
+    _cb_lock = threading.Lock()
 
     def __init__(self, api_key: str | None = None) -> None:
         """Initialize OpenRouter client.
 
         Args:
             api_key: OpenRouter API key (defaults to settings)
+
+        Raises:
+            OpenRouterError: If API key is not configured
         """
         self.api_key = api_key or settings.openrouter_api_key
+        if not self.api_key:
+            raise OpenRouterError("OpenRouter API key is not configured.")
         self.base_url = settings.openrouter_base_url
         self.max_retries = 5
 
@@ -69,20 +76,24 @@ class OpenRouterClient:
             OpenRouterError: For other errors
         """
         # Check circuit breaker (shared across all instances)
-        if OpenRouterClient._consecutive_failures >= OpenRouterClient._circuit_breaker_threshold:
-            # Auto-reset after 60 seconds
+        with OpenRouterClient._cb_lock:
             if (
-                OpenRouterClient._last_failure_time
-                and time.time() - OpenRouterClient._last_failure_time > 60
+                OpenRouterClient._consecutive_failures
+                >= OpenRouterClient._circuit_breaker_threshold
             ):
-                logger.info("Circuit breaker auto-reset after 60 seconds")
-                OpenRouterClient._consecutive_failures = 0
-                OpenRouterClient._last_failure_time = None
-            else:
-                raise OpenRouterError(
-                    f"Circuit breaker open: {OpenRouterClient._consecutive_failures} "
-                    f"consecutive failures (resets after 60s)"
-                )
+                # Auto-reset after 60 seconds
+                if (
+                    OpenRouterClient._last_failure_time
+                    and time.time() - OpenRouterClient._last_failure_time > 60
+                ):
+                    logger.info("Circuit breaker auto-reset after 60 seconds")
+                    OpenRouterClient._consecutive_failures = 0
+                    OpenRouterClient._last_failure_time = None
+                else:
+                    raise OpenRouterError(
+                        f"Circuit breaker open: {OpenRouterClient._consecutive_failures} "
+                        f"consecutive failures (resets after 60s)"
+                    )
 
         config = config or {}
 
@@ -98,8 +109,9 @@ class OpenRouterClient:
         for attempt in range(self.max_retries):
             try:
                 response = self._call_api(payload)
-                OpenRouterClient._consecutive_failures = 0  # Reset on success
-                OpenRouterClient._last_failure_time = None
+                with OpenRouterClient._cb_lock:
+                    OpenRouterClient._consecutive_failures = 0  # Reset on success
+                    OpenRouterClient._last_failure_time = None
                 return response
             except RateLimitError:
                 if attempt < self.max_retries - 1:
@@ -109,12 +121,14 @@ class OpenRouterClient:
                     )
                     time.sleep(wait_time)
                 else:
-                    OpenRouterClient._consecutive_failures += 1
-                    OpenRouterClient._last_failure_time = time.time()
+                    with OpenRouterClient._cb_lock:
+                        OpenRouterClient._consecutive_failures += 1
+                        OpenRouterClient._last_failure_time = time.time()
                     raise
             except Exception as e:
-                OpenRouterClient._consecutive_failures += 1
-                OpenRouterClient._last_failure_time = time.time()
+                with OpenRouterClient._cb_lock:
+                    OpenRouterClient._consecutive_failures += 1
+                    OpenRouterClient._last_failure_time = time.time()
                 logger.error(f"OpenRouter API error: {e}")
                 raise APIError(f"Failed to generate text: {e}") from e
 
@@ -136,7 +150,8 @@ class OpenRouterClient:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://github.com/METResearchGroup/evals-platform",
+            "Referer": "https://github.com/METResearchGroup/mind-technology-lab-evals-platform",
+            "X-Title": "MET Evals Platform",
         }
 
         try:

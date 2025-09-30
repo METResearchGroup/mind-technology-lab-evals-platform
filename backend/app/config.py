@@ -22,10 +22,7 @@ class Settings(BaseSettings):
     # API Configuration
     api_v1_prefix: str = Field(default="/api", alias="API_V1_PREFIX")
     cors_origins: list[str] = Field(
-        default=[
-            "http://localhost:3000",
-            "https://frontend-6di9lbbgg-marktorres10s-projects.vercel.app",
-        ],
+        default=["http://localhost:3000"],
         alias="CORS_ORIGINS",
     )
 
