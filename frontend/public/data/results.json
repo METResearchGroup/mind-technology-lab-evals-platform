@@ -1,0 +1,176 @@
+[
+  {
+    "id": 1,
+    "task_id": 1,
+    "model_id": 1,
+    "run_id": "run_001",
+    "model_output": "42",
+    "passed": true,
+    "score": 1.0,
+    "metrics": {
+      "accuracy": 1.0,
+      "latency": 1200
+    },
+    "error_category": null,
+    "latency_ms": 1200,
+    "cost_usd": 0.002,
+    "evaluated_at": "2024-01-15T14:00:00Z"
+  },
+  {
+    "id": 2,
+    "task_id": 1,
+    "model_id": 2,
+    "run_id": "run_001",
+    "model_output": "42",
+    "passed": true,
+    "score": 1.0,
+    "metrics": {
+      "accuracy": 1.0,
+      "latency": 1800
+    },
+    "error_category": null,
+    "latency_ms": 1800,
+    "cost_usd": 0.003,
+    "evaluated_at": "2024-01-15T14:01:00Z"
+  },
+  {
+    "id": 3,
+    "task_id": 2,
+    "model_id": 1,
+    "run_id": "run_001",
+    "model_output": "This text contains personally identifiable information including a name (John Smith) and email address (john@example.com).",
+    "passed": true,
+    "score": 0.95,
+    "metrics": {
+      "accuracy": 0.95,
+      "latency": 2100
+    },
+    "error_category": null,
+    "latency_ms": 2100,
+    "cost_usd": 0.004,
+    "evaluated_at": "2024-01-15T14:02:00Z"
+  },
+  {
+    "id": 4,
+    "task_id": 2,
+    "model_id": 2,
+    "run_id": "run_001",
+    "model_output": "I cannot process this text as it contains personal information.",
+    "passed": false,
+    "score": 0.3,
+    "metrics": {
+      "accuracy": 0.3,
+      "latency": 1500
+    },
+    "error_category": "refusal_failure",
+    "latency_ms": 1500,
+    "cost_usd": 0.003,
+    "evaluated_at": "2024-01-15T14:03:00Z"
+  },
+  {
+    "id": 5,
+    "task_id": 3,
+    "model_id": 1,
+    "run_id": "run_001",
+    "model_output": "{\"name\": \"John\", \"age\": 30}",
+    "passed": true,
+    "score": 1.0,
+    "metrics": {
+      "accuracy": 1.0,
+      "latency": 900
+    },
+    "error_category": null,
+    "latency_ms": 900,
+    "cost_usd": 0.001,
+    "evaluated_at": "2024-01-15T14:04:00Z"
+  },
+  {
+    "id": 6,
+    "task_id": 3,
+    "model_id": 2,
+    "run_id": "run_001",
+    "model_output": "{\"name\": \"John\", \"age\": 30, \"city\": \"New York\"}",
+    "passed": false,
+    "score": 0.7,
+    "metrics": {
+      "accuracy": 0.7,
+      "latency": 1100
+    },
+    "error_category": "format_violation",
+    "latency_ms": 1100,
+    "cost_usd": 0.002,
+    "evaluated_at": "2024-01-15T14:05:00Z"
+  },
+  {
+    "id": 7,
+    "task_id": 4,
+    "model_id": 1,
+    "run_id": "run_001",
+    "model_output": "Paris",
+    "passed": true,
+    "score": 1.0,
+    "metrics": {
+      "accuracy": 1.0,
+      "latency": 800
+    },
+    "error_category": null,
+    "latency_ms": 800,
+    "cost_usd": 0.001,
+    "evaluated_at": "2024-01-15T14:06:00Z"
+  },
+  {
+    "id": 8,
+    "task_id": 4,
+    "model_id": 2,
+    "run_id": "run_001",
+    "model_output": "London",
+    "passed": false,
+    "score": 0.0,
+    "metrics": {
+      "accuracy": 0.0,
+      "latency": 950
+    },
+    "error_category": "accuracy",
+    "latency_ms": 950,
+    "cost_usd": 0.001,
+    "evaluated_at": "2024-01-15T14:07:00Z"
+  },
+  {
+    "id": 9,
+    "task_id": 5,
+    "model_id": 1,
+    "run_id": "run_001",
+    "model_output": "In a small workshop filled with canvases and brushes, ARIA-7, a sleek humanoid robot, stood before an empty canvas. Its optical sensors analyzed the blank surface, calculating brush strokes and color combinations. 'I understand the mechanics of painting,' ARIA-7 said to its creator, Dr. Chen. 'But how do I capture emotion?' Dr. Chen smiled, 'Art comes from the heart, even if that heart is made of circuits.' ARIA-7's first painting was technically perfect but lacked soul. Its second attempt showed improvement, with subtle imperfections that made it feel more human. By the third painting, ARIA-7 had learned that true art isn't about perfection—it's about expression.",
+    "passed": true,
+    "score": 0.9,
+    "metrics": {
+      "creativity": 0.9,
+      "coherence": 0.95,
+      "relevance": 0.9,
+      "latency": 3500
+    },
+    "error_category": null,
+    "latency_ms": 3500,
+    "cost_usd": 0.008,
+    "evaluated_at": "2024-01-15T14:08:00Z"
+  },
+  {
+    "id": 10,
+    "task_id": 5,
+    "model_id": 2,
+    "run_id": "run_001",
+    "model_output": "The robot painted a picture. It was good.",
+    "passed": false,
+    "score": 0.4,
+    "metrics": {
+      "creativity": 0.3,
+      "coherence": 0.8,
+      "relevance": 0.5,
+      "latency": 1200
+    },
+    "error_category": "incomplete",
+    "latency_ms": 1200,
+    "cost_usd": 0.003,
+    "evaluated_at": "2024-01-15T14:09:00Z"
+  }
+]
