@@ -110,73 +110,44 @@ DUMMY_TASKS = [
     },
 ]
 
-# Latest models from major providers (2025)
-DUMMY_MODELS = [
-    # OpenAI - Latest reasoning models
-    {
-        "provider": "openrouter",
-        "model_name": "openai/o3-mini",
-        "prompt_version": "v1.0",
-        "config": json.dumps(
+# Load model metadata from JSON (source of truth)
+METADATA_PATH = Path(__file__).parent.parent / "data" / "model_metadata.json"
+
+
+def load_model_metadata():
+    """Load model metadata from JSON file (source of truth)."""
+    with open(METADATA_PATH) as f:
+        return json.load(f)
+
+
+def generate_models_from_metadata():
+    """Generate models list from model_metadata.json."""
+    metadata = load_model_metadata()
+    models = []
+
+    for model_id in metadata.keys():
+        config = {
+            "temperature": 0.7,
+            "max_tokens": 2000,
+        }
+
+        # Add special config for specific models
+        if "o3-mini" in model_id:
+            config["reasoning_effort"] = "medium"
+
+        models.append(
             {
-                "temperature": 0.7,
-                "max_tokens": 1000,
-                "reasoning_effort": "medium",  # high, medium, or low
+                "provider": "openrouter",
+                "model_name": model_id,
+                "prompt_version": "v1.0",
+                "config": json.dumps(config),
             }
-        ),
-    },
-    {
-        "provider": "openrouter",
-        "model_name": "openai/gpt-4o",
-        "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
-    },
-    {
-        "provider": "openrouter",
-        "model_name": "openai/gpt-4o-mini",
-        "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 1000}),
-    },
-    # Anthropic - Latest Claude 3.7
-    {
-        "provider": "openrouter",
-        "model_name": "anthropic/claude-3.7-sonnet",
-        "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 2000}),
-    },
-    {
-        "provider": "openrouter",
-        "model_name": "anthropic/claude-3.5-sonnet",
-        "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 2000}),
-    },
-    # Google - Latest Gemini 2.x
-    {
-        "provider": "openrouter",
-        "model_name": "google/gemini-2.5-flash-preview-09-2025",
-        "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
-    },
-    {
-        "provider": "openrouter",
-        "model_name": "google/gemini-2.0-flash-001",
-        "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
-    },
-    # Alibaba - Latest Qwen 3
-    {
-        "provider": "openrouter",
-        "model_name": "qwen/qwen3-30b-a3b",
-        "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
-    },
-    {
-        "provider": "openrouter",
-        "model_name": "qwen/qwen3-14b",
-        "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
-    },
-]
+        )
+
+    return models
+
+
+DUMMY_MODELS = generate_models_from_metadata()
 
 
 def seed_database() -> None:

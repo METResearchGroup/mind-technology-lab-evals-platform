@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Play, Clock, AlertTriangle, RotateCcw, Eye } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { useModels } from '@/hooks/useModels';
@@ -15,7 +16,9 @@ import { useResults } from '@/hooks/useResults';
 import { ResultsTable } from '@/components/tables/ResultsTable';
 import { ResultDetailModal } from '@/components/ui/ResultDetailModal';
 import { TaskDetailModal } from '@/components/ui/TaskDetailModal';
+import { ModelBadgeWithTooltip } from '@/components/ui/ModelBadgeWithTooltip';
 import { estimateEvalRunCost, getCostWarningLevel, formatCost } from '@/lib/utils/cost-estimation';
+import { loadModelMetadata, getProviders, type ModelMetadataMap } from '@/lib/services/model-metadata-service';
 import type { EvalResult, EvalTask } from '@/types';
 
 interface EvaluateTabProps {
@@ -36,6 +39,23 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
   const [runName, setRunName] = useState('');
   const [selectedResult, setSelectedResult] = useState<EvalResult | null>(null);
   const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<EvalTask | null>(null);
+  const [providerFilter, setProviderFilter] = useState<string>('all');
+  const [modelMetadata, setModelMetadata] = useState<ModelMetadataMap>({});
+
+  // Load model metadata on mount
+  useEffect(() => {
+    loadModelMetadata().then(setModelMetadata);
+  }, []);
+
+  // Get unique providers from metadata
+  const providers = getProviders(modelMetadata);
+
+  // Filter models by provider
+  const filteredModels = models.filter((model) => {
+    if (providerFilter === 'all') return true;
+    const meta = modelMetadata[model.model_name];
+    return meta && meta.provider === providerFilter;
+  });
 
   // Calculate cost estimation
   const costEstimate = estimateEvalRunCost(selectedTasks, selectedModels, tasks, models);
@@ -167,44 +187,78 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
       {/* Model Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>Select Models</CardTitle>
-          <CardDescription>
-            Choose which LLM models to evaluate
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Select Models</CardTitle>
+              <CardDescription>
+                Choose which LLM models to evaluate ({filteredModels.length} available)
+              </CardDescription>
+            </div>
+            <div className="w-[200px]">
+              <Select value={providerFilter} onValueChange={setProviderFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Providers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Providers</SelectItem>
+                  {providers.map((provider) => (
+                    <SelectItem key={provider} value={provider}>
+                      {provider}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {models.length === 0 ? (
+          {filteredModels.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">
               No models available. Please add models first.
             </p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {models.map((model) => (
-                <div
-                  key={model.id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                    selectedModels.includes(model.id)
-                      ? 'border-eval-success bg-eval-success/10'
-                      : 'border-border hover:border-eval-info'
-                  }`}
-                  onClick={() => {
-                    setSelectedModels(prev =>
-                      prev.includes(model.id)
-                        ? prev.filter(id => id !== model.id)
-                        : [...prev, model.id]
-                    );
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-sm">{model.model_name}</h3>
-                    <Badge variant="outline" className="text-xs">{model.provider}</Badge>
+              {filteredModels.map((model) => {
+                const meta = modelMetadata[model.model_name];
+                return (
+                  <div
+                    key={model.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      selectedModels.includes(model.id)
+                        ? 'border-eval-success bg-eval-success/10'
+                        : 'border-border hover:border-eval-info'
+                    }`}
+                    onClick={() => {
+                      setSelectedModels((prev) =>
+                        prev.includes(model.id)
+                          ? prev.filter((id) => id !== model.id)
+                          : [...prev, model.id]
+                      );
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      {meta ? (
+                        <ModelBadgeWithTooltip modelName={model.model_name} className="text-sm" />
+                      ) : (
+                        <h3 className="font-medium text-sm">{model.model_name}</h3>
+                      )}
+                    </div>
+                    {meta && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                        {meta.description}
+                      </p>
+                    )}
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      {meta && (
+                        <>
+                          <span>{meta.cost_input_per_million.toFixed(2)}/M in</span>
+                          <span>{meta.cost_output_per_million.toFixed(2)}/M out</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Temp: {(model.config.temperature as number) ?? 'N/A'} |
-                    Tokens: {(model.config.max_tokens as number) ?? 'N/A'}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>
