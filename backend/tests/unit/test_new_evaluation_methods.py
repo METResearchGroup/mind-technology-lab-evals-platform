@@ -155,6 +155,77 @@ class TestJSONExactMethod:
         assert result["error_category"] == "json_parse_error"
         assert result["metrics"]["parse_failed"] is True
 
+    def test_json_exact_markdown_code_block(self, test_db: Session) -> None:
+        """Test JSON exact match extracts from markdown code blocks."""
+        task = EvalTask(
+            name="JSON Test",
+            input="Return JSON",
+            expected_output='{"name": "John", "age": 30}',
+            task_type="classification",
+            evaluation_method="json_exact",
+        )
+        test_db.add(task)
+        test_db.commit()
+
+        engine = EvaluationEngine()
+        # LLM often returns JSON wrapped in markdown
+        markdown_output = """```json
+{
+  "name": "John",
+  "age": 30
+}
+```"""
+        result = engine.evaluate_classification(task, markdown_output)
+
+        assert result["passed"] is True
+        assert result["score"] == 1.0
+        assert result["metrics"]["extracted_from_markdown"] is True
+        assert result["metrics"]["actual_json"] == {"name": "John", "age": 30}
+
+    def test_json_exact_plain_code_block(self, test_db: Session) -> None:
+        """Test JSON exact match extracts from plain code blocks (no json tag)."""
+        task = EvalTask(
+            name="JSON Test",
+            input="Return JSON",
+            expected_output='{"name": "Alice"}',
+            task_type="classification",
+            evaluation_method="json_exact",
+        )
+        test_db.add(task)
+        test_db.commit()
+
+        engine = EvaluationEngine()
+        # Sometimes LLMs use ``` without json tag
+        markdown_output = """```
+{"name": "Alice"}
+```"""
+        result = engine.evaluate_classification(task, markdown_output)
+
+        assert result["passed"] is True
+        assert result["score"] == 1.0
+        assert result["metrics"]["extracted_from_markdown"] is True
+
+    def test_json_exact_embedded_in_text(self, test_db: Session) -> None:
+        """Test JSON exact match extracts JSON from prose."""
+        task = EvalTask(
+            name="JSON Test",
+            input="Return JSON",
+            expected_output='{"result": "success"}',
+            task_type="classification",
+            evaluation_method="json_exact",
+        )
+        test_db.add(task)
+        test_db.commit()
+
+        engine = EvaluationEngine()
+        # LLM adds explanatory text
+        text_output = 'Here is the JSON you requested: {"result": "success"}'
+        result = engine.evaluate_classification(task, text_output)
+
+        assert result["passed"] is True
+        assert result["score"] == 1.0
+        assert result["metrics"]["extracted_from_markdown"] is True
+
 
 class TestLevenshteinMethod:
     """Tests for levenshtein evaluation method."""

@@ -157,15 +157,65 @@ class EvaluationEngine:
             "error_category": None if passed else "missing_substring",
         }
 
+    def _extract_json_from_markdown(self, text: str) -> str:
+        """Extract JSON from markdown code blocks.
+
+        Handles common LLM output formats:
+        - ```json {...} ```
+        - ``` {...} ```
+        - Plain {...}
+
+        Args:
+            text: Text potentially containing JSON in code blocks
+
+        Returns:
+            Extracted JSON string
+        """
+        import re
+
+        # Try to extract from code blocks (```json ... ``` or ``` ... ```)
+        # Pattern: ```(json)?\n?(.*?)\n?```
+        code_block_pattern = r"```(?:json)?\s*\n?(.*?)\n?```"
+        match = re.search(code_block_pattern, text, re.DOTALL)
+
+        if match:
+            return match.group(1).strip()
+
+        # If no code block, try to extract JSON object from text
+        # Pattern: find content between first { and last }
+        json_pattern = r"\{.*\}"
+        match = re.search(json_pattern, text, re.DOTALL)
+
+        if match:
+            return match.group(0)
+
+        # Return original text if no extraction worked
+        return text.strip()
+
     def _evaluate_json_exact(self, task: EvalTask, model_output: str) -> dict[str, Any]:
-        """JSON deep equality check."""
+        """JSON deep equality check with markdown code block handling."""
         try:
+            # Parse expected output
             expected_json = json.loads(task.expected_output or "{}")
-            actual_json = json.loads(model_output)
+
+            # Try to parse actual output directly first
+            try:
+                actual_json = json.loads(model_output)
+                extracted = False
+            except json.JSONDecodeError:
+                # If direct parse fails, try extracting from markdown
+                extracted_json = self._extract_json_from_markdown(model_output)
+                actual_json = json.loads(extracted_json)
+                extracted = True
+                logger.info(f"Extracted JSON from markdown for task {task.id}")
+
             passed = expected_json == actual_json
             score = 1.0 if passed else 0.0
 
-            logger.info(f"JSON exact eval: task={task.id}, passed={passed}")
+            logger.info(
+                f"JSON exact eval: task={task.id}, passed={passed}, "
+                f"extracted_from_markdown={extracted}"
+            )
 
             return {
                 "passed": passed,
@@ -174,6 +224,7 @@ class EvaluationEngine:
                     "method": "json_exact",
                     "expected_json": expected_json,
                     "actual_json": actual_json,
+                    "extracted_from_markdown": extracted,
                 },
                 "error_category": None if passed else "json_mismatch",
             }
@@ -189,6 +240,7 @@ class EvaluationEngine:
                     "method": "json_exact",
                     "error": str(e),
                     "parse_failed": True,
+                    "raw_output": model_output[:200],  # First 200 chars for debugging
                 },
                 "error_category": "json_parse_error",
             }
