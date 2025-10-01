@@ -109,6 +109,36 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
   const isCompleted = runStatus?.status === 'completed' || runStatus?.status === 'failed';
   const showResults = isCompleted && currentRunResults.length > 0;
 
+  // Determine current model being evaluated
+  const getCurrentEvaluationInfo = () => {
+    if (!runStatus || !isRunning) return null;
+
+    const completedCount = runStatus.completed_tasks;
+    const totalTasks = selectedTasks.length;
+    const totalModels = selectedModels.length;
+
+    // Calculate which model/task combo is currently running
+    const currentIndex = completedCount;
+    const currentModelIndex = Math.floor(currentIndex / totalTasks);
+    const currentTaskIndex = currentIndex % totalTasks;
+
+    if (currentModelIndex >= totalModels) return null;
+
+    const currentModelId = selectedModels[currentModelIndex];
+    const currentTaskId = selectedTasks[currentTaskIndex];
+    const currentModel = models.find(m => m.id === currentModelId);
+    const currentTask = tasks.find(t => t.id === currentTaskId);
+
+    return {
+      model: currentModel?.model_name || 'Unknown',
+      task: currentTask?.name || 'Unknown',
+      modelIndex: currentModelIndex + 1,
+      taskIndex: currentTaskIndex + 1,
+    };
+  };
+
+  const currentEval = getCurrentEvaluationInfo();
+
   return (
     <div className="space-y-6">
       {/* Task Selection */}
@@ -325,6 +355,30 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
                   </AlertDescription>
                 </Alert>
               )}
+            </div>
+          )}
+
+          {/* Current Evaluation Status (appears above button when running) */}
+          {currentEval && (
+            <div className="flex justify-end">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
+                  <span className="font-medium text-blue-700 dark:text-blue-300">
+                    Evaluating:
+                  </span>
+                </div>
+                <Badge variant="secondary" className="text-xs">
+                  {currentEval.model}
+                </Badge>
+                <span className="text-muted-foreground text-xs">on</span>
+                <span className="text-xs font-medium max-w-[200px] truncate">
+                  {currentEval.task}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  (Model {currentEval.modelIndex}/{selectedModels.length})
+                </span>
+              </div>
             </div>
           )}
 

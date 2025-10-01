@@ -29,7 +29,7 @@ const taskFormSchema = z.object({
 interface TaskFormProps {
   onSubmit: (data: TaskFormData) => void;
   loading?: boolean;
-  initialData?: Partial<TaskFormData>;
+  initialData?: Partial<TaskFormData> & { id?: number };
   onCancel?: () => void;
 }
 
