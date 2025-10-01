@@ -42,6 +42,7 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
   const [providerFilter, setProviderFilter] = useState<string>('all');
   const [modelMetadata, setModelMetadata] = useState<ModelMetadataMap>({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [lastCompletedRunId, setLastCompletedRunId] = useState<string | null>(null);
 
   // Load model metadata on mount
   useEffect(() => {
@@ -112,12 +113,22 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
 
   // Show success notification when run completes
   useEffect(() => {
-    if (isCompleted && runStatus?.status === 'completed') {
+    // Check if this is a newly completed run
+    if (
+      runStatus?.status === 'completed' &&
+      runData?.id &&
+      lastCompletedRunId !== runData.id
+    ) {
+      setLastCompletedRunId(runData.id);
       setShowSuccess(true);
-      const timer = setTimeout(() => setShowSuccess(false), 4000); // Show for 4 seconds
+
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 5000); // Show for 5 seconds
+
       return () => clearTimeout(timer);
     }
-  }, [isCompleted, runStatus?.status]);
+  }, [runStatus?.status, runData?.id, lastCompletedRunId]);
 
   // Determine current model being evaluated
   const getCurrentEvaluationInfo = () => {
