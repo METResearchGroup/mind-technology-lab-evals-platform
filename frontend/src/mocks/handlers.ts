@@ -130,7 +130,7 @@ export const handlers = [
     });
   }),
 
-  http.get(`${API_URL}/api/runs/:id`, ({ params }) => {
+  http.get(`${API_URL}/api/evaluate/:id`, ({ params }) => {
     return HttpResponse.json({
       id: params.id,
       name: 'Evaluation Run',
