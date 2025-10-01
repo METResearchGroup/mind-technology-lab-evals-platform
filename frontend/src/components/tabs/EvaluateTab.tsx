@@ -41,6 +41,7 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
   const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<EvalTask | null>(null);
   const [providerFilter, setProviderFilter] = useState<string>('all');
   const [modelMetadata, setModelMetadata] = useState<ModelMetadataMap>({});
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Load model metadata on mount
   useEffect(() => {
@@ -109,9 +110,32 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
   const isCompleted = runStatus?.status === 'completed' || runStatus?.status === 'failed';
   const showResults = isCompleted && currentRunResults.length > 0;
 
+  // Show success notification when run completes
+  useEffect(() => {
+    if (isCompleted && runStatus?.status === 'completed') {
+      setShowSuccess(true);
+      const timer = setTimeout(() => setShowSuccess(false), 4000); // Show for 4 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [isCompleted, runStatus?.status]);
+
   // Determine current model being evaluated
   const getCurrentEvaluationInfo = () => {
-    if (!runStatus || !isRunning) return null;
+    if (!isRunning) return null;
+    if (!runStatus) {
+      // If no runStatus yet, show first model/task
+      if (selectedModels.length > 0 && selectedTasks.length > 0) {
+        const firstModel = models.find(m => m.id === selectedModels[0]);
+        const firstTask = tasks.find(t => t.id === selectedTasks[0]);
+        return {
+          model: firstModel?.model_name || 'Unknown',
+          task: firstTask?.name || 'Unknown',
+          modelIndex: 1,
+          taskIndex: 1,
+        };
+      }
+      return null;
+    }
 
     const completedCount = runStatus.completed_tasks;
     const totalTasks = selectedTasks.length;
@@ -358,29 +382,42 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
             </div>
           )}
 
-          {/* Current Evaluation Status (appears above button when running) */}
-          {currentEval && (
-            <div className="flex justify-end">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-sm animate-in fade-in slide-in-from-top-2 duration-300">
+          {/* Status Indicator - appears above button */}
+          <div className="flex justify-end min-h-[48px]">
+            {currentEval && isRunning && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-sm shadow-sm">
                 <div className="flex items-center gap-1.5">
-                  <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse" />
-                  <span className="font-medium text-blue-700 dark:text-blue-300">
+                  <div className="h-2.5 w-2.5 bg-blue-500 rounded-full animate-pulse" />
+                  <span className="font-semibold text-blue-700 dark:text-blue-300">
                     Evaluating:
                   </span>
                 </div>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs font-mono">
                   {currentEval.model}
                 </Badge>
-                <span className="text-muted-foreground text-xs">on</span>
+                <span className="text-muted-foreground text-xs">→</span>
                 <span className="text-xs font-medium max-w-[200px] truncate">
                   {currentEval.task}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  (Model {currentEval.modelIndex}/{selectedModels.length})
+                  ({currentEval.modelIndex}/{selectedModels.length})
                 </span>
               </div>
-            </div>
-          )}
+            )}
+            {showSuccess && !isRunning && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-sm shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 bg-green-500 rounded-full" />
+                  <span className="font-semibold text-green-700 dark:text-green-300">
+                    ✓ Evaluation Complete!
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {runStatus?.completed_tasks || 0} evaluations finished
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Run Button */}
           <div className="flex justify-end">
