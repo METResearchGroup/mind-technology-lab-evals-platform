@@ -10,31 +10,54 @@ import { EvaluateTab } from '@/components/tabs/EvaluateTab';
 import { ViewTasksTab } from '@/components/tabs/ViewTasksTab';
 import { ReviewPerformanceTab } from '@/components/tabs/ReviewPerformanceTab';
 import { TaskFormData, ModelFormData } from '@/types';
-import { useCreateTask } from '@/hooks/useTasks';
+import { useCreateTask, useUpdateTask, useTask } from '@/hooks/useTasks';
 import { useCreateModel } from '@/hooks/useModels';
 // import { useDashboardStats } from '@/hooks/useResults'; // Not used yet
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('evaluate');
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+
   // const { data: dashboardStats } = useDashboardStats(); // Not used yet
   const { mutate: createTask, isPending: isCreatingTask } = useCreateTask();
+  const { mutate: updateTask, isPending: isUpdatingTask } = useUpdateTask();
   const { mutate: createModel, isPending: isCreatingModel } = useCreateModel();
 
+  // Fetch task being edited
+  const { data: editingTask } = useTask(editingTaskId || 0);
+
   const handleTaskSubmit = (data: TaskFormData) => {
-    createTask(
-      {
-        name: data.name,
-        input: data.input,
-        task_type: data.task_type,
-        evaluation_method: data.evaluation_method,
-        description: data.description,
-        expected_output: data.expected_output,
-        ground_truth: data.ground_truth,
-        rubric: data.rubric,
-        tags: data.tags,
-        project: data.project,
-      },
-      {
+    const taskData = {
+      name: data.name,
+      input: data.input,
+      task_type: data.task_type,
+      evaluation_method: data.evaluation_method,
+      description: data.description,
+      expected_output: data.expected_output,
+      ground_truth: data.ground_truth,
+      rubric: data.rubric,
+      tags: data.tags,
+      project: data.project,
+    };
+
+    if (editingTaskId) {
+      // Update existing task
+      updateTask(
+        { id: editingTaskId, data: taskData },
+        {
+          onSuccess: () => {
+            alert('✅ Task updated successfully!');
+            setEditingTaskId(null);
+            setActiveTab('view-tasks');
+          },
+          onError: (error: Error) => {
+            alert(`❌ Failed to update task: ${error.message}`);
+          },
+        }
+      );
+    } else {
+      // Create new task
+      createTask(taskData, {
         onSuccess: () => {
           alert('✅ Task saved successfully!');
           setActiveTab('view-tasks');
@@ -42,8 +65,8 @@ export default function Home() {
         onError: (error: Error) => {
           alert(`❌ Failed to save task: ${error.message}`);
         },
-      }
-    );
+      });
+    }
   };
 
   const handleModelSubmit = (data: ModelFormData) => {
@@ -93,15 +116,29 @@ export default function Home() {
 
             <TabsContent value="add-task" className="space-y-6">
               <ErrorBoundary>
-                <TaskForm onSubmit={handleTaskSubmit} loading={isCreatingTask} />
+                <TaskForm
+                  onSubmit={handleTaskSubmit}
+                  loading={isCreatingTask || isUpdatingTask}
+                  initialData={editingTaskId && editingTask ? editingTask : undefined}
+                  onCancel={() => {
+                    setEditingTaskId(null);
+                    setActiveTab('view-tasks');
+                  }}
+                />
               </ErrorBoundary>
             </TabsContent>
 
             <TabsContent value="view-tasks" className="space-y-6">
               <ErrorBoundary>
                 <ViewTasksTab
-                  onAddTask={() => setActiveTab('add-task')}
-                  onEditTask={(id) => console.log('Edit task:', id)}
+                  onAddTask={() => {
+                    setEditingTaskId(null);
+                    setActiveTab('add-task');
+                  }}
+                  onEditTask={(id) => {
+                    setEditingTaskId(id);
+                    setActiveTab('add-task');
+                  }}
                   onDeleteTask={(id) => console.log('Delete task:', id)}
                   onRunTask={(id) => console.log('Run task:', id)}
                 />

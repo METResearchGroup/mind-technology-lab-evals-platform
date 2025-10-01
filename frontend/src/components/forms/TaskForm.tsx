@@ -30,9 +30,12 @@ interface TaskFormProps {
   onSubmit: (data: TaskFormData) => void;
   loading?: boolean;
   initialData?: Partial<TaskFormData>;
+  onCancel?: () => void;
 }
 
-export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormProps) {
+export function TaskForm({ onSubmit, loading = false, initialData, onCancel }: TaskFormProps) {
+  const isEditing = !!initialData?.id;
+
   const {
     register,
     handleSubmit,
@@ -72,9 +75,11 @@ export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormPro
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Add New Task</CardTitle>
+        <CardTitle>{isEditing ? 'Edit Evaluation Task' : 'Add New Task'}</CardTitle>
         <CardDescription>
-          Create a new evaluation task for testing LLM performance
+          {isEditing
+            ? 'Update task details and evaluation criteria'
+            : 'Create a new evaluation task for testing LLM performance'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -251,11 +256,19 @@ export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormPro
 
           {/* Submit Button */}
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline">
-              Cancel
-            </Button>
+            {onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Task'}
+              {loading
+                ? isEditing
+                  ? 'Updating...'
+                  : 'Saving...'
+                : isEditing
+                  ? 'Update Task'
+                  : 'Save Task'}
             </Button>
           </div>
         </form>
