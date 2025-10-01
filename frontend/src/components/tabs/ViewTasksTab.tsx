@@ -178,54 +178,54 @@ export function ViewTasksTab({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[250px]">Name</TableHead>
+                  <TableHead className="w-[120px]">Type</TableHead>
+                  <TableHead className="w-[140px]">Method</TableHead>
+                  <TableHead className="w-[120px]">Project</TableHead>
+                  <TableHead className="w-[180px]">Tags</TableHead>
+                  <TableHead className="w-[100px]">Created</TableHead>
+                  <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTasks.map((task) => (
                   <TableRow key={task.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-medium">{task.name}</div>
+                    <TableCell className="font-medium max-w-[250px]">
+                      <div className="space-y-1">
+                        <div className="font-medium line-clamp-2">{task.name}</div>
                         {task.description && (
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground line-clamp-2">
                             {task.description}
                           </div>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(task)}</TableCell>
-                    <TableCell>{getMethodBadge(task.evaluation_method)}</TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[120px]">{getStatusBadge(task)}</TableCell>
+                    <TableCell className="max-w-[140px]">{getMethodBadge(task.evaluation_method)}</TableCell>
+                    <TableCell className="max-w-[120px]">
                       {task.project ? (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs truncate max-w-full">
                           {task.project}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[180px]">
                       <div className="flex flex-wrap gap-1">
-                        {task.tags.slice(0, 3).map((tag: string) => (
+                        {task.tags.slice(0, 2).map((tag: string) => (
                           <Badge key={tag} variant="secondary" className="text-xs">
                             {tag}
                           </Badge>
                         ))}
-                        {task.tags.length > 3 && (
+                        {task.tags.length > 2 && (
                           <Badge variant="secondary" className="text-xs">
-                            +{task.tags.length - 3}
+                            +{task.tags.length - 2}
                           </Badge>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[100px] text-xs">
                       {new Date(task.created_at).toLocaleDateString()}
                     </TableCell>
                         <TableCell>
