@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Plus, Edit, Trash2, Play } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Play, Eye } from 'lucide-react';
 import { EvalTask } from '@/types';
-import { loadTasks } from '@/lib/data';
+import { useTasks } from '@/hooks/useTasks';
+import { TaskDetailModal } from '@/components/ui/TaskDetailModal';
+import { MethodBadgeWithTooltip } from '@/components/ui/MethodBadgeWithTooltip';
 
 interface ViewTasksTabProps {
   onAddTask?: () => void;
@@ -18,41 +20,26 @@ interface ViewTasksTabProps {
   onRunTask?: (taskId: number) => void;
 }
 
-export function ViewTasksTab({ 
-  onAddTask, 
-  onEditTask, 
-  onDeleteTask, 
-  onRunTask 
+export function ViewTasksTab({
+  onAddTask,
+  onEditTask,
+  onDeleteTask,
+  onRunTask
 }: ViewTasksTabProps) {
-  const [tasks, setTasks] = useState<EvalTask[]>([]);
+  const { data: tasks = [], isLoading: loading, error } = useTasks();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const tasksData = await loadTasks();
-        setTasks(tasksData);
-      } catch (error) {
-        console.error('Failed to load tasks:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+  const [selectedTask, setSelectedTask] = useState<EvalTask | null>(null);
 
   // Filter tasks based on search and filters
   const filteredTasks = tasks.filter(task => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+      task.tags.some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+
     const matchesType = typeFilter === 'all' || task.task_type === typeFilter;
     const matchesMethod = methodFilter === 'all' || task.evaluation_method === methodFilter;
     const matchesProject = projectFilter === 'all' || task.project === projectFilter;
@@ -74,17 +61,7 @@ export function ViewTasksTab({
   };
 
   const getMethodBadge = (method: string) => {
-    const colors = {
-      code: 'text-eval-info',
-      llm_judge: 'text-eval-warning',
-      hybrid: 'text-eval-success',
-    };
-    
-    return (
-      <Badge variant="outline" className={`text-xs ${colors[method as keyof typeof colors]}`}>
-        {method}
-      </Badge>
-    );
+    return <MethodBadgeWithTooltip method={method} className="text-xs" />;
   };
 
   if (loading) {
@@ -94,6 +71,19 @@ export function ViewTasksTab({
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-eval-info mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading tasks...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <p className="text-red-500 mb-2">Failed to load tasks</p>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
           </div>
         </CardContent>
       </Card>
@@ -188,81 +178,92 @@ export function ViewTasksTab({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>Tags</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[250px]">Name</TableHead>
+                  <TableHead className="w-[120px]">Type</TableHead>
+                  <TableHead className="w-[140px]">Method</TableHead>
+                  <TableHead className="w-[120px]">Project</TableHead>
+                  <TableHead className="w-[180px]">Tags</TableHead>
+                  <TableHead className="w-[100px]">Created</TableHead>
+                  <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredTasks.map((task) => (
                   <TableRow key={task.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-medium">{task.name}</div>
+                    <TableCell className="font-medium max-w-[250px]">
+                      <div className="space-y-1">
+                        <div className="font-medium line-clamp-2">{task.name}</div>
                         {task.description && (
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-sm text-muted-foreground line-clamp-2">
                             {task.description}
                           </div>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{getStatusBadge(task)}</TableCell>
-                    <TableCell>{getMethodBadge(task.evaluation_method)}</TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[120px]">{getStatusBadge(task)}</TableCell>
+                    <TableCell className="max-w-[140px]">{getMethodBadge(task.evaluation_method)}</TableCell>
+                    <TableCell className="max-w-[120px]">
                       {task.project ? (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs truncate max-w-full">
                           {task.project}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[180px]">
                       <div className="flex flex-wrap gap-1">
-                        {task.tags.slice(0, 3).map((tag) => (
+                        {task.tags.slice(0, 2).map((tag: string) => (
                           <Badge key={tag} variant="secondary" className="text-xs">
                             {tag}
                           </Badge>
                         ))}
-                        {task.tags.length > 3 && (
+                        {task.tags.length > 2 && (
                           <Badge variant="secondary" className="text-xs">
-                            +{task.tags.length - 3}
+                            +{task.tags.length - 2}
                           </Badge>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[100px] text-xs">
                       {new Date(task.created_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onRunTask?.(task.id)}
-                        >
-                          <Play className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onEditTask?.(task.id)}
-                        >
-                          <Edit className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onDeleteTask?.(task.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setSelectedTask(task)}
+                              title="View Details"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onRunTask?.(task.id)}
+                              title="Run Evaluation"
+                            >
+                              <Play className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onEditTask?.(task.id)}
+                              title="Edit Task"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onDeleteTask?.(task.id)}
+                              title="Delete Task"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -310,6 +311,13 @@ export function ViewTasksTab({
           </CardContent>
         </Card>
       </div>
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTask}
+        open={!!selectedTask}
+        onClose={() => setSelectedTask(null)}
+      />
     </div>
   );
 }

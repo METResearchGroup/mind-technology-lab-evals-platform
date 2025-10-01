@@ -4,89 +4,175 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Play, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { EvalTask, Model, EvalResult } from '@/types';
-import { loadTasks, loadModels, loadResults } from '@/lib/data';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Play, Clock, AlertTriangle, RotateCcw, Eye } from 'lucide-react';
+import { useTasks } from '@/hooks/useTasks';
+import { useModels } from '@/hooks/useModels';
+import { useRunEvaluation, useRunStatus } from '@/hooks/useEvaluation';
+import { useResults } from '@/hooks/useResults';
+import { ResultsTable } from '@/components/tables/ResultsTable';
+import { ResultDetailModal } from '@/components/ui/ResultDetailModal';
+import { TaskDetailModal } from '@/components/ui/TaskDetailModal';
+import { ModelBadgeWithTooltip } from '@/components/ui/ModelBadgeWithTooltip';
+import { estimateEvalRunCost, getCostWarningLevel, formatCost } from '@/lib/utils/cost-estimation';
+import { loadModelMetadata, getProviders, type ModelMetadataMap } from '@/lib/services/model-metadata-service';
+import type { EvalResult, EvalTask } from '@/types';
 
 interface EvaluateTabProps {
   onRunEvaluation?: (taskIds: number[], modelIds: number[]) => void;
 }
 
 export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
-  const [tasks, setTasks] = useState<EvalTask[]>([]);
-  const [models, setModels] = useState<Model[]>([]);
-  const [results, setResults] = useState<EvalResult[]>([]);
+  const { data: tasks = [] } = useTasks();
+  const { data: models = [] } = useModels();
+  const { mutate: runEvaluation, isPending: isRunning, data: runData, error: runError } = useRunEvaluation();
+  const { data: runStatus } = useRunStatus(runData?.id || null);
+  const { data: currentRunResults = [] } = useResults(
+    runData?.id ? { run_id: runData.id } : undefined
+  );
+
   const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
   const [selectedModels, setSelectedModels] = useState<number[]>([]);
-  const [isRunning, setIsRunning] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [runName, setRunName] = useState('');
+  const [selectedResult, setSelectedResult] = useState<EvalResult | null>(null);
+  const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<EvalTask | null>(null);
+  const [providerFilter, setProviderFilter] = useState<string>('all');
+  const [modelMetadata, setModelMetadata] = useState<ModelMetadataMap>({});
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [lastCompletedRunId, setLastCompletedRunId] = useState<string | null>(null);
 
+  // Load model metadata on mount
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [tasksData, modelsData, resultsData] = await Promise.all([
-          loadTasks(),
-          loadModels(),
-          loadResults(),
-        ]);
-        setTasks(tasksData);
-        setModels(modelsData);
-        setResults(resultsData);
-      } catch (error) {
-        console.error('Failed to load data:', error);
-      }
-    };
-
-    loadData();
+    loadModelMetadata().then(setModelMetadata);
   }, []);
 
-  const handleRunEvaluation = async () => {
+  // Get unique providers from metadata
+  const providers = getProviders(modelMetadata);
+
+  // Filter models by provider
+  const filteredModels = models.filter((model) => {
+    if (providerFilter === 'all') return true;
+    const meta = modelMetadata[model.model_name];
+    return meta && meta.provider === providerFilter;
+  });
+
+  // Calculate cost estimation
+  const costEstimate = estimateEvalRunCost(selectedTasks, selectedModels, tasks, models);
+  const costWarning = getCostWarningLevel(costEstimate.total);
+
+  const handleRunEvaluation = () => {
     if (selectedTasks.length === 0 || selectedModels.length === 0) {
       alert('Please select at least one task and one model');
       return;
     }
 
-    setIsRunning(true);
-    setProgress(0);
+    // Confirm if cost is high
+    if (costEstimate.total > 2.0) {
+      const confirmed = confirm(
+        `This run will cost approximately ${formatCost(costEstimate.total)}. Continue?`
+      );
+      if (!confirmed) return;
+    }
 
-    // Simulate evaluation progress
-    const totalSteps = selectedTasks.length * selectedModels.length;
-    let currentStep = 0;
-
-    const progressInterval = setInterval(() => {
-      currentStep++;
-      setProgress((currentStep / totalSteps) * 100);
-      
-      if (currentStep >= totalSteps) {
-        clearInterval(progressInterval);
-        setIsRunning(false);
-        setProgress(100);
-        onRunEvaluation?.(selectedTasks, selectedModels);
+    runEvaluation(
+      {
+        task_ids: selectedTasks,
+        model_ids: selectedModels,
+        run_name: runName || `Run ${new Date().toLocaleString()}`,
+      },
+      {
+        onSuccess: () => {
+          if (onRunEvaluation) {
+            onRunEvaluation(selectedTasks, selectedModels);
+          }
+        },
+        onError: (error) => {
+          alert(`Failed to run evaluation: ${error.message}`);
+        },
       }
-    }, 1000);
-
-    // Simulate evaluation completion
-    setTimeout(() => {
-      clearInterval(progressInterval);
-      setIsRunning(false);
-      setProgress(100);
-    }, totalSteps * 1000);
+    );
   };
 
-  const getTaskName = (taskId: number) => {
-    return tasks.find(t => t.id === taskId)?.name || `Task ${taskId}`;
+  const handleStartNewRun = () => {
+    setSelectedTasks([]);
+    setSelectedModels([]);
+    setRunName('');
+    // Reset run data by not storing it (React Query will handle cleanup)
   };
 
-  const getModelName = (modelId: number) => {
-    return models.find(m => m.id === modelId)?.model_name || `Model ${modelId}`;
+  // Calculate progress from run status
+  const progress = runStatus
+    ? (runStatus.completed_tasks / runStatus.total_tasks) * 100
+    : 0;
+
+  const isCompleted = runStatus?.status === 'completed' || runStatus?.status === 'failed';
+  const showResults = isCompleted && currentRunResults.length > 0;
+
+  // Show success notification when run completes
+  useEffect(() => {
+    // Check if this is a newly completed run
+    if (
+      runStatus?.status === 'completed' &&
+      runData?.id &&
+      lastCompletedRunId !== runData.id
+    ) {
+      setLastCompletedRunId(runData.id);
+      setShowSuccess(true);
+
+      const timer = setTimeout(() => {
+        setShowSuccess(false);
+      }, 5000); // Show for 5 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [runStatus?.status, runData?.id, lastCompletedRunId]);
+
+  // Determine current model being evaluated
+  const getCurrentEvaluationInfo = () => {
+    if (!isRunning) return null;
+    if (!runStatus) {
+      // If no runStatus yet, show first model/task
+      if (selectedModels.length > 0 && selectedTasks.length > 0) {
+        const firstModel = models.find(m => m.id === selectedModels[0]);
+        const firstTask = tasks.find(t => t.id === selectedTasks[0]);
+        return {
+          model: firstModel?.model_name || 'Unknown',
+          task: firstTask?.name || 'Unknown',
+          modelIndex: 1,
+          taskIndex: 1,
+        };
+      }
+      return null;
+    }
+
+    const completedCount = runStatus.completed_tasks;
+    const totalTasks = selectedTasks.length;
+    const totalModels = selectedModels.length;
+
+    // Calculate which model/task combo is currently running
+    const currentIndex = completedCount;
+    const currentModelIndex = Math.floor(currentIndex / totalTasks);
+    const currentTaskIndex = currentIndex % totalTasks;
+
+    if (currentModelIndex >= totalModels) return null;
+
+    const currentModelId = selectedModels[currentModelIndex];
+    const currentTaskId = selectedTasks[currentTaskIndex];
+    const currentModel = models.find(m => m.id === currentModelId);
+    const currentTask = tasks.find(t => t.id === currentTaskId);
+
+    return {
+      model: currentModel?.model_name || 'Unknown',
+      task: currentTask?.name || 'Unknown',
+      modelIndex: currentModelIndex + 1,
+      taskIndex: currentTaskIndex + 1,
+    };
   };
 
-  const getLatestResult = (taskId: number, modelId: number) => {
-    return results
-      .filter(r => r.task_id === taskId && r.model_id === modelId)
-      .sort((a, b) => new Date(b.evaluated_at).getTime() - new Date(a.evaluated_at).getTime())[0];
-  };
+  const currentEval = getCurrentEvaluationInfo();
 
   return (
     <div className="space-y-6">
@@ -95,105 +181,261 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
         <CardHeader>
           <CardTitle>Select Tasks</CardTitle>
           <CardDescription>
-            Choose which tasks to evaluate
+            Choose which evaluation tasks to run against your models
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedTasks.includes(task.id)
-                    ? 'border-eval-success bg-eval-success/10'
-                    : 'border-border hover:border-eval-info'
-                }`}
-                onClick={() => {
-                  setSelectedTasks(prev =>
-                    prev.includes(task.id)
-                      ? prev.filter(id => id !== task.id)
-                      : [...prev, task.id]
-                  );
-                }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">{task.name}</h3>
-                  <Badge variant="outline">{task.task_type}</Badge>
+          {tasks.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              No tasks available. Please add tasks first.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tasks.map((task) => (
+                <div
+                  key={task.id}
+                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    selectedTasks.includes(task.id)
+                      ? 'border-eval-success bg-eval-success/10'
+                      : 'border-border hover:border-eval-info'
+                  }`}
+                  onClick={() => {
+                    setSelectedTasks(prev =>
+                      prev.includes(task.id)
+                        ? prev.filter(id => id !== task.id)
+                        : [...prev, task.id]
+                    );
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-medium text-sm">{task.name}</h3>
+                    <Badge variant="outline" className="text-xs">{task.task_type}</Badge>
+                  </div>
+                  {task.description && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {task.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex flex-wrap gap-1">
+                      {task.tags.slice(0, 3).map((tag: string) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                      {task.tags.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{task.tags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedTaskForDetail(task);
+                      }}
+                      className="text-xs"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      See More
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {task.description}
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {task.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Model Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>Select Models</CardTitle>
-          <CardDescription>
-            Choose which models to test
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Select Models</CardTitle>
+              <CardDescription>
+                Choose which LLM models to evaluate ({filteredModels.length} available)
+              </CardDescription>
+            </div>
+            <div className="w-[200px]">
+              <Select value={providerFilter} onValueChange={setProviderFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Providers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Providers</SelectItem>
+                  {providers.map((provider) => (
+                    <SelectItem key={provider} value={provider}>
+                      {provider}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {models.map((model) => (
-              <div
-                key={model.id}
-                className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                  selectedModels.includes(model.id)
-                    ? 'border-eval-success bg-eval-success/10'
-                    : 'border-border hover:border-eval-info'
-                }`}
-                onClick={() => {
-                  setSelectedModels(prev =>
-                    prev.includes(model.id)
-                      ? prev.filter(id => id !== model.id)
-                      : [...prev, model.id]
-                  );
-                }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">{model.model_name}</h3>
-                  <Badge variant="outline">{model.provider}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Temp: {(model.config.temperature as number) ?? 'N/A'}
-                </p>
-              </div>
-            ))}
-          </div>
+          {filteredModels.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              No models available. Please add models first.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {filteredModels.map((model) => {
+                const meta = modelMetadata[model.model_name];
+                return (
+                  <div
+                    key={model.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      selectedModels.includes(model.id)
+                        ? 'border-eval-success bg-eval-success/10'
+                        : 'border-border hover:border-eval-info'
+                    }`}
+                    onClick={() => {
+                      setSelectedModels((prev) =>
+                        prev.includes(model.id)
+                          ? prev.filter((id) => id !== model.id)
+                          : [...prev, model.id]
+                      );
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      {meta ? (
+                        <ModelBadgeWithTooltip modelName={model.model_name} className="text-sm" />
+                      ) : (
+                        <h3 className="font-medium text-sm">{model.model_name}</h3>
+                      )}
+                    </div>
+                    {meta && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                        {meta.description}
+                      </p>
+                    )}
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      {meta && (
+                        <>
+                          <span>{meta.cost_input_per_million.toFixed(2)}/M in</span>
+                          <span>{meta.cost_output_per_million.toFixed(2)}/M out</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Run Evaluation */}
+      {/* Run Configuration & Execution */}
       <Card>
         <CardHeader>
           <CardTitle>Run Evaluation</CardTitle>
           <CardDescription>
-            Execute evaluation with selected tasks and models
+            Configure and execute evaluation with selected tasks and models
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Selected: {selectedTasks.length} tasks × {selectedModels.length} models = {selectedTasks.length * selectedModels.length} evaluations
-              </p>
+          {/* Run Name Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Run Name (optional)
+            </label>
+            <Input
+              placeholder="e.g., 'GPT-4 baseline test' or 'Prompt v2.0 comparison'"
+              value={runName}
+              onChange={(e) => setRunName(e.target.value)}
+              disabled={isRunning}
+            />
+          </div>
+
+          {/* Cost Estimation & Stats */}
+          {selectedTasks.length > 0 && selectedModels.length > 0 && (
+            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Total Evaluations</div>
+                  <div className="font-bold">{selectedTasks.length * selectedModels.length}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Est. Cost</div>
+                  <div className="font-bold">{formatCost(costEstimate.total)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Per Eval</div>
+                  <div className="font-bold">{formatCost(costEstimate.perEval)}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Est. Time</div>
+                  <div className="font-bold">~{(selectedTasks.length * selectedModels.length * 3).toFixed(0)}s</div>
+                </div>
+              </div>
+
+              {/* Cost warnings */}
+              {costWarning === 'medium' && (
+                <Alert className="border-yellow-500">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    This run will cost over $0.50. Consider reducing tasks or models.
+                  </AlertDescription>
+                </Alert>
+              )}
+              {costWarning === 'high' && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    ⚠️ High cost run (${costEstimate.total.toFixed(2)})! You&apos;ll be asked to confirm.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
+          )}
+
+          {/* Status Indicator - appears above button */}
+          <div className="flex justify-end min-h-[48px]">
+            {currentEval && isRunning && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 text-sm shadow-sm">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 bg-blue-500 rounded-full animate-pulse" />
+                  <span className="font-semibold text-blue-700 dark:text-blue-300">
+                    Evaluating:
+                  </span>
+                </div>
+                <Badge variant="secondary" className="text-xs font-mono">
+                  {currentEval.model}
+                </Badge>
+                <span className="text-muted-foreground text-xs">→</span>
+                <span className="text-xs font-medium max-w-[200px] truncate">
+                  {currentEval.task}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  ({currentEval.modelIndex}/{selectedModels.length})
+                </span>
+              </div>
+            )}
+            {showSuccess && !isRunning && (
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 text-sm shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2.5 w-2.5 bg-green-500 rounded-full" />
+                  <span className="font-semibold text-green-700 dark:text-green-300">
+                    ✓ Evaluation Complete!
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {runStatus?.completed_tasks || 0} evaluations finished
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Run Button */}
+          <div className="flex justify-end">
             <Button
               onClick={handleRunEvaluation}
               disabled={isRunning || selectedTasks.length === 0 || selectedModels.length === 0}
-              className="min-w-32"
+              size="lg"
             >
               {isRunning ? (
                 <>
@@ -209,68 +451,75 @@ export function EvaluateTab({ onRunEvaluation }: EvaluateTabProps) {
             </Button>
           </div>
 
-          {isRunning && (
+          {/* Progress Bar */}
+          {isRunning && runStatus && (
             <div className="space-y-2">
               <Progress value={progress} className="w-full" />
               <p className="text-sm text-muted-foreground text-center">
-                {progress.toFixed(0)}% complete
+                {runStatus.completed_tasks} / {runStatus.total_tasks} evaluations complete ({progress.toFixed(0)}%)
               </p>
             </div>
+          )}
+
+          {/* Error Display */}
+          {runError && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                Failed to run evaluation: {runError.message}
+              </AlertDescription>
+            </Alert>
           )}
         </CardContent>
       </Card>
 
-      {/* Recent Results Preview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Results</CardTitle>
-          <CardDescription>
-            Latest evaluation results for selected tasks and models
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {selectedTasks.length > 0 && selectedModels.length > 0 ? (
-              selectedTasks.map((taskId) =>
-                selectedModels.map((modelId) => {
-                  const result = getLatestResult(taskId, modelId);
-                  return (
-                    <div key={`${taskId}-${modelId}`} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <h4 className="font-medium">{getTaskName(taskId)}</h4>
-                        <p className="text-sm text-muted-foreground">{getModelName(modelId)}</p>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        {result ? (
-                          <>
-                            {result.passed ? (
-                              <CheckCircle className="h-5 w-5 text-eval-success" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-eval-error" />
-                            )}
-                            <span className="text-sm">
-                              {result.score ? (result.score * 100).toFixed(1) + '%' : 'N/A'}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(result.evaluated_at).toLocaleDateString()}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">No results yet</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )
-            ) : (
-              <p className="text-center text-muted-foreground py-8">
-                Select tasks and models to see recent results
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Results Display */}
+      {showResults && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Results</CardTitle>
+                <CardDescription>
+                  Run: {runData?.name || runData?.id?.slice(0, 8)} |
+                  Completed: {runStatus?.completed_at ? new Date(runStatus.completed_at).toLocaleString() : 'N/A'}
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleStartNewRun}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Start New Run
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ResultsTable
+              results={currentRunResults}
+              tasks={tasks}
+              models={models}
+              showSummary={true}
+              onResultClick={setSelectedResult}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Result Detail Modal */}
+      <ResultDetailModal
+        result={selectedResult}
+        task={tasks.find((t) => t.id === selectedResult?.task_id) || null}
+        model={models.find((m) => m.id === selectedResult?.model_id) || null}
+        open={!!selectedResult}
+        onClose={() => setSelectedResult(null)}
+      />
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={selectedTaskForDetail}
+        open={!!selectedTaskForDetail}
+        onClose={() => setSelectedTaskForDetail(null)}
+      />
     </div>
   );
 }

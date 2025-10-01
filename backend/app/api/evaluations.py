@@ -6,7 +6,7 @@ import time
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -130,6 +130,25 @@ def run_evaluation(
     logger.info(f"Evaluation run {run_id} completed: " f"success={completed}, failed={failed}")
 
     return RunStatusResponse.from_orm(eval_run)
+
+
+@router.get("/runs", response_model=list[RunStatusResponse])
+def list_runs(
+    limit: int = Query(100, le=1000, description="Maximum number of runs to return"),
+    db: Session = Depends(get_db),
+) -> list[RunStatusResponse]:
+    """List all evaluation runs, ordered by most recent first.
+
+    Args:
+        limit: Maximum number of runs to return (default 100, max 1000)
+        db: Database session
+
+    Returns:
+        List of evaluation runs ordered by started_at descending
+    """
+    runs = db.query(EvalRun).order_by(EvalRun.started_at.desc()).limit(limit).all()
+    logger.info(f"Listed {len(runs)} evaluation runs")
+    return [RunStatusResponse.from_orm(run) for run in runs]
 
 
 @router.get("/{run_id}", response_model=RunStatusResponse)

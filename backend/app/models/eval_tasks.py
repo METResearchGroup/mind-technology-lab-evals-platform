@@ -26,7 +26,9 @@ class EvalTask(Base):
     )
     evaluation_method = Column(
         String(50),
-        CheckConstraint("evaluation_method IN ('code', 'llm_judge', 'hybrid')"),
+        CheckConstraint(
+            "evaluation_method IN ('exact_match', 'contains', 'json_exact', 'levenshtein', 'llm_factuality', 'llm_judge', 'hybrid')"
+        ),
         nullable=False,
     )
     rubric = Column(Text, nullable=True)  # For LLM-as-judge evaluations

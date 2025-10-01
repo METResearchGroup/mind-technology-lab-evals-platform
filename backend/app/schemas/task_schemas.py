@@ -18,9 +18,15 @@ class TaskBase(BaseModel):
     task_type: Literal["classification", "generation"] = Field(
         ..., description="Type of evaluation task"
     )
-    evaluation_method: Literal["code", "llm_judge", "hybrid"] = Field(
-        ..., description="Method for evaluation"
-    )
+    evaluation_method: Literal[
+        "exact_match",
+        "contains",
+        "json_exact",
+        "levenshtein",
+        "llm_factuality",
+        "llm_judge",
+        "hybrid",
+    ] = Field(..., description="Method for evaluation")
     rubric: str | None = Field(None, description="Rubric for LLM-as-judge evaluation")
     tags: list[str] | None = Field(default_factory=list, description="Tags for filtering")
     project: str | None = Field(None, max_length=100, description="Project name")
@@ -42,7 +48,18 @@ class TaskUpdate(BaseModel):
     expected_output: str | None = None
     ground_truth: str | None = None
     task_type: Literal["classification", "generation"] | None = None
-    evaluation_method: Literal["code", "llm_judge", "hybrid"] | None = None
+    evaluation_method: (
+        Literal[
+            "exact_match",
+            "contains",
+            "json_exact",
+            "levenshtein",
+            "llm_factuality",
+            "llm_judge",
+            "hybrid",
+        ]
+        | None
+    ) = None
     rubric: str | None = None
     tags: list[str] | None = None
     project: str | None = Field(None, max_length=100)
@@ -59,7 +76,15 @@ class TaskResponse(BaseModel):
     expected_output: str | None
     ground_truth: str | None
     task_type: Literal["classification", "generation"]
-    evaluation_method: Literal["code", "llm_judge", "hybrid"]
+    evaluation_method: Literal[
+        "exact_match",
+        "contains",
+        "json_exact",
+        "levenshtein",
+        "llm_factuality",
+        "llm_judge",
+        "hybrid",
+    ]
     rubric: str | None
     tags: list[str]
     project: str | None

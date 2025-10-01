@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Plus, Edit, Trash2, CheckCircle } from 'lucide-react';
-import { Model } from '@/types';
-import { loadModels } from '@/lib/data';
+import { useModels } from '@/hooks/useModels';
 
 interface ViewModelsTabProps {
   onAddModel?: () => void;
@@ -17,37 +16,21 @@ interface ViewModelsTabProps {
   onDeleteModel?: (modelId: number) => void;
 }
 
-export function ViewModelsTab({ 
-  onAddModel, 
-  onEditModel, 
-  onDeleteModel 
+export function ViewModelsTab({
+  onAddModel,
+  onEditModel,
+  onDeleteModel
 }: ViewModelsTabProps) {
-  const [models, setModels] = useState<Model[]>([]);
+  const { data: models = [], isLoading: loading, error } = useModels();
   const [searchTerm, setSearchTerm] = useState('');
   const [providerFilter, setProviderFilter] = useState<string>('all');
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const modelsData = await loadModels();
-        setModels(modelsData);
-      } catch (error) {
-        console.error('Failed to load models:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
 
   // Filter models based on search and filters
   const filteredModels = models.filter(model => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       model.model_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       model.provider.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesProvider = providerFilter === 'all' || model.provider === providerFilter;
 
     return matchesSearch && matchesProvider;
@@ -64,7 +47,7 @@ export function ViewModelsTab({
       openai: 'text-eval-success',
       anthropic: 'text-eval-warning',
     };
-    
+
     return (
       <Badge variant="outline" className={`text-xs ${colors[provider as keyof typeof colors] || 'text-muted-foreground'}`}>
         {provider}
@@ -87,6 +70,19 @@ export function ViewModelsTab({
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-eval-info mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading models...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="text-center">
+            <p className="text-red-500 mb-2">Failed to load models</p>
+            <p className="text-sm text-muted-foreground">{error.message}</p>
           </div>
         </CardContent>
       </Card>

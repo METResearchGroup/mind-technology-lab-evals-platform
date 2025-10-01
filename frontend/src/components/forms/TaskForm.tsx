@@ -20,7 +20,7 @@ const taskFormSchema = z.object({
   expected_output: z.string().optional(),
   ground_truth: z.string().optional(),
   task_type: z.enum(['classification', 'generation']),
-  evaluation_method: z.enum(['code', 'llm_judge', 'hybrid']),
+  evaluation_method: z.enum(['exact_match', 'contains', 'json_exact', 'levenshtein', 'llm_factuality', 'llm_judge', 'hybrid']),
   rubric: z.string().optional(),
   tags: z.array(z.string()),
   project: z.string().optional(),
@@ -29,10 +29,13 @@ const taskFormSchema = z.object({
 interface TaskFormProps {
   onSubmit: (data: TaskFormData) => void;
   loading?: boolean;
-  initialData?: Partial<TaskFormData>;
+  initialData?: Partial<TaskFormData> & { id?: number };
+  onCancel?: () => void;
 }
 
-export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormProps) {
+export function TaskForm({ onSubmit, loading = false, initialData, onCancel }: TaskFormProps) {
+  const isEditing = !!initialData?.id;
+
   const {
     register,
     handleSubmit,
@@ -48,7 +51,7 @@ export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormPro
       expected_output: initialData?.expected_output || '',
       ground_truth: initialData?.ground_truth || '',
       task_type: initialData?.task_type || 'classification',
-      evaluation_method: initialData?.evaluation_method || 'code',
+      evaluation_method: initialData?.evaluation_method || 'exact_match',
       rubric: initialData?.rubric || '',
       tags: initialData?.tags || [],
       project: initialData?.project || '',
@@ -72,9 +75,11 @@ export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormPro
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Add New Task</CardTitle>
+        <CardTitle>{isEditing ? 'Edit Evaluation Task' : 'Add New Task'}</CardTitle>
         <CardDescription>
-          Create a new evaluation task for testing LLM performance
+          {isEditing
+            ? 'Update task details and evaluation criteria'
+            : 'Create a new evaluation task for testing LLM performance'}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -137,14 +142,18 @@ export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormPro
                 <Label htmlFor="evaluation_method">Evaluation Method *</Label>
                 <Select
                   value={evaluationMethod}
-                  onValueChange={(value) => setValue('evaluation_method', value as 'code' | 'llm_judge' | 'hybrid')}
+                  onValueChange={(value) => setValue('evaluation_method', value as typeof evaluationMethod)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select evaluation method" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="code">Code-based</SelectItem>
-                    <SelectItem value="llm_judge">LLM-as-Judge</SelectItem>
+                    <SelectItem value="exact_match">Exact Match</SelectItem>
+                    <SelectItem value="contains">Contains</SelectItem>
+                    <SelectItem value="json_exact">JSON Exact</SelectItem>
+                    <SelectItem value="levenshtein">Levenshtein (Fuzzy)</SelectItem>
+                    <SelectItem value="llm_factuality">LLM Factuality Judge</SelectItem>
+                    <SelectItem value="llm_judge">LLM Judge</SelectItem>
                     <SelectItem value="hybrid">Hybrid</SelectItem>
                   </SelectContent>
                 </Select>
@@ -247,11 +256,19 @@ export function TaskForm({ onSubmit, loading = false, initialData }: TaskFormPro
 
           {/* Submit Button */}
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline">
-              Cancel
-            </Button>
+            {onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
             <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Task'}
+              {loading
+                ? isEditing
+                  ? 'Updating...'
+                  : 'Saving...'
+                : isEditing
+                  ? 'Update Task'
+                  : 'Save Task'}
             </Button>
           </div>
         </form>
