@@ -110,37 +110,71 @@ DUMMY_TASKS = [
     },
 ]
 
-# Dummy models for testing different providers (using latest 2024/2025 models)
+# Latest models from major providers (2025)
 DUMMY_MODELS = [
+    # OpenAI - Latest reasoning models
     {
         "provider": "openrouter",
-        "model_name": "openai/gpt-4o-mini",
+        "model_name": "openai/o3-mini",
         "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 500}),
+        "config": json.dumps(
+            {
+                "temperature": 0.7,
+                "max_tokens": 1000,
+                "reasoning_effort": "medium",  # high, medium, or low
+            }
+        ),
     },
     {
         "provider": "openrouter",
         "model_name": "openai/gpt-4o",
         "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.5, "max_tokens": 1000}),
+        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
+    },
+    {
+        "provider": "openrouter",
+        "model_name": "openai/gpt-4o-mini",
+        "prompt_version": "v1.0",
+        "config": json.dumps({"temperature": 0.7, "max_tokens": 1000}),
+    },
+    # Anthropic - Latest Claude 3.7
+    {
+        "provider": "openrouter",
+        "model_name": "anthropic/claude-3.7-sonnet",
+        "prompt_version": "v1.0",
+        "config": json.dumps({"temperature": 0.7, "max_tokens": 2000}),
     },
     {
         "provider": "openrouter",
         "model_name": "anthropic/claude-3.5-sonnet",
         "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.7, "max_tokens": 1000}),
+        "config": json.dumps({"temperature": 0.7, "max_tokens": 2000}),
+    },
+    # Google - Latest Gemini 2.x
+    {
+        "provider": "openrouter",
+        "model_name": "google/gemini-2.5-flash-preview-09-2025",
+        "prompt_version": "v1.0",
+        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
     },
     {
         "provider": "openrouter",
-        "model_name": "anthropic/claude-3.5-haiku",
+        "model_name": "google/gemini-2.0-flash-001",
         "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.3, "max_tokens": 500}),
+        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
+    },
+    # Alibaba - Latest Qwen 3
+    {
+        "provider": "openrouter",
+        "model_name": "qwen/qwen3-30b-a3b",
+        "prompt_version": "v1.0",
+        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
     },
     {
         "provider": "openrouter",
-        "model_name": "google/gemini-flash-1.5",
+        "model_name": "qwen/qwen3-14b",
         "prompt_version": "v1.0",
-        "config": json.dumps({"temperature": 0.5, "max_tokens": 800}),
+        "config": json.dumps({"temperature": 0.7, "max_tokens": 1500}),
     },
 ]
 
